@@ -1,7 +1,7 @@
 import subprocess
-from core.registry import action
-from core.base_module import BaseModule
-from tray.tray_app import confirm_with_popup
+from src.core.registry import action
+from src.core.base_module import BaseModule
+from src.tray.tray_app import JarvisTray
 
 
 
@@ -14,7 +14,7 @@ class SystemController(BaseModule):
 
     @action(name="shutdown")
     def shutdown(self):
-        if confirm_with_popup("Shutdown in 5 seconds?", "Confirm Shutdown"):
+        if JarvisTray.confirm_with_popup("Shutdown in 5 seconds?", "Confirm Shutdown"):
             self._run("shutdown /s /t 0")
             return self.success("Shutting down")
         return self.success("Cancelled")
@@ -22,7 +22,7 @@ class SystemController(BaseModule):
 
     @action(name="restart")
     def restart(self):
-        if confirm_with_popup("Restart in 5 seconds?", "Confirm Restart"):
+        if JarvisTray.confirm_with_popup("Restart in 5 seconds?", "Confirm Restart"):
             self._run("shutdown /r /t 0")
             return self.success("Restarting")
         return self.success("Cancelled")
@@ -30,7 +30,7 @@ class SystemController(BaseModule):
 
     @action(name="logout")
     def logout(self):
-        if confirm_with_popup("Logout in 5 seconds?", "Confirm Logout"):
+        if JarvisTray.confirm_with_popup("Logout in 5 seconds?", "Confirm Logout"):
             self._run("shutdown /l")
             return self.success("Logging out")
         return self.success("Cancelled")
@@ -38,7 +38,7 @@ class SystemController(BaseModule):
 
     @action(name="sleep")
     def sleep(self):
-        if confirm_with_popup("Sleep in 5 seconds?", "Confirm Sleep"):
+        if JarvisTray.confirm_with_popup("Sleep in 5 seconds?", "Confirm Sleep"):
             self._run("powershell -command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState('Suspend', $false, $false)\"")
             return self.success("Sleeping")
         return self.success("Cancelled")
@@ -46,7 +46,7 @@ class SystemController(BaseModule):
 
     @action(name="lock")
     def lock(self):
-        if confirm_with_popup("Lock in 5 seconds?", "Confirm Lock?"):
+        if JarvisTray.confirm_with_popup("Lock in 5 seconds?", "Confirm Lock?"):
             self._run("rundll32.exe user32.dll,LockWorkStation")
             return self.success("Locked")
         return self.success("cancelled")
