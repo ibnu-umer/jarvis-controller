@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from ..system.system_controller import SystemController
+from system.system_controller import SystemController
 
 
 
@@ -8,6 +8,7 @@ sc = SystemController()
 
 @app.route("/action/<name>", methods=["POST"])
 def run_action(name):
+    print(">>>>>>>", name)
     params = request.json or {}
     action_func = getattr(sc, name, None)
     if not action_func:
@@ -17,6 +18,6 @@ def run_action(name):
 
 
 
-
-if __name__ == "__main__":
+def run_server():
     app.run(host="0.0.0.0", port=6000)
+
