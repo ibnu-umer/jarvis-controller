@@ -108,6 +108,35 @@ class SystemController(BaseModule):
             f"Battery status fetched successfully",
             data={"percent": battery.percent, "is_plugged": battery.power_plugged}
         )
+    
+
+    @action(name="wifi", params={"mode"})
+    def toggle_wifi(self, mode):
+        interface_name = "WiFi"
+
+        if mode == "on":
+            self._run(f"netsh interface set interface {interface_name} enable")
+            return self.success("Wi-Fi turned ON")
+
+        if mode == "off":
+            self._run(f"netsh interface set interface {interface_name} disable")
+            return self.success("Wi-Fi turned OFF")
+
+        return self.failure("Invalid mode")
+    
+
+
+    @action(name="bluetooth", params={"mode"})
+    def toggle_bluetooth(self, mode):
+        if mode == "on":
+            self._run('powershell "Start-Service bthserv"')
+            return self.success("Bluetooth enabled")
+
+        if mode == "off":
+            self._run('powershell "Stop-Service bthserv"')
+            return self.success("Bluetooth disabled")
+
+        return self.failure("Invalid mode")
 
     
 
