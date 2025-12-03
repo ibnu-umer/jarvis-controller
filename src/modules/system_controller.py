@@ -1,7 +1,7 @@
 import subprocess
-from src.core.registry import action
-from src.core.base_module import BaseModule
-from src.tray.tray_app import JarvisTray
+from core.registry import action
+from core.base_module import BaseModule
+from tray.tray_app import JarvisTray
 from datetime import datetime
 import pytz, psutil
 

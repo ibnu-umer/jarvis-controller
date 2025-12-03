@@ -1,4 +1,4 @@
-from src.api.listener import WindowsListener
+from api.listener import WindowsListener
 
 
 if __name__ == "__main__":

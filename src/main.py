@@ -1,4 +1,4 @@
-from src.core.registry import load_all_modules
+from core.registry import load_all_modules
 
 
 
