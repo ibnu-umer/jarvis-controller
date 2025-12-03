@@ -3,6 +3,7 @@ import threading
 import requests
 from configs.config import WIN_HOST, WIN_PORT
 from core.registry import MODULE_REGISTRY, FUNCTION_REGISTRY
+from core.logger import logger
 
 
 
@@ -63,6 +64,7 @@ class WindowsListener:
             self.server_thread = threading.Thread(target=self._run, daemon=True)
             self.server_thread.start()
             print(f"Windows listener running at http://{self.host}:{self.port} in background thread...")
+            logger.info(f"Windows listener running at http://{self.host}:{self.port} in background thread...")
 
 
     def stop(self):

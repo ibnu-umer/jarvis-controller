@@ -1,6 +1,7 @@
 import importlib
 import pkgutil
 from modules import __path__ as modules_path
+from core.logger import logger
 
 
 
@@ -60,5 +61,6 @@ class ModuleRegistry:
 MODULE_REGISTRY = ModuleRegistry()
 
 def load_registry():
-    MODULE_REGISTRY.load_all_modules()        
+    MODULE_REGISTRY.load_all_modules()   
+    logger.info(f"Modules loaded: {list(MODULE_REGISTRY._instances.keys())}")     
 

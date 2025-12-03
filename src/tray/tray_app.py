@@ -7,6 +7,7 @@ import pystray
 from pystray import MenuItem as Item, Menu
 import ctypes
 from configs.config import WIN_BASE_URL, WSL_BASE_URL
+from core.logger import logger
 
 
 
@@ -140,16 +141,10 @@ class JarvisTray:
 
     # --- Run ---
     def run(self):
-        # Optional: start Windows listener if needed
-        try:
-            from src.api.listener import run_server
-            run_server()
-        except ImportError:
-            pass
-
         self.tray_icon = pystray.Icon("jarvis-tray", self.make_icon(), "Jarvis", self.build_menu())
         self.bg_thread = threading.Thread(target=self.health_worker, daemon=True)
         self.bg_thread.start()
+        logger.info("Tray started")
 
         try:
             self.tray_icon.run()
@@ -157,5 +152,6 @@ class JarvisTray:
             self.stop_event.set()
             self.bg_thread.join(timeout=2)
             print("Tray stopped.")
+            logger.info("Tray stopped")
 
 
