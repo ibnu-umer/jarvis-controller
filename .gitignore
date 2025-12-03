@@ -4,3 +4,7 @@ venv
 *.pyc
 
 test.py
+
+build
+dist
+*.spec
