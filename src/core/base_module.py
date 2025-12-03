@@ -1,14 +1,14 @@
 class BaseModule:
-    def success(self, message, result=None):
+    def success(self, message, data=None):
         return {
             "success": True,
             "message": message,
-            "result": result
+            "data": data
         }
 
-    def failure(self, message, error=None):
+    def failure(self, message, data=None):
         return {
             "success": False,
             "message": message,
-            "error": error
+            "data": data
         }

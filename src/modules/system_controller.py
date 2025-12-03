@@ -2,6 +2,8 @@ import subprocess
 from src.core.registry import action
 from src.core.base_module import BaseModule
 from src.tray.tray_app import JarvisTray
+from datetime import datetime
+import pytz, psutil
 
 
 
@@ -52,18 +54,61 @@ class SystemController(BaseModule):
         return self.success("cancelled")
     
 
-    @action(name="brightness", params={"value"})
-    def brightness(self, value):
+    @action(name="brightness", params={"value", "mode"})
+    def set_brightness(self, value, mode="set"):
+        if mode not in ("set", "inc", "dec"):
+            return self.failure("Invalid mode")
+        
+        if mode == "inc":
+            self._run(f"\"{self.NIRCMD}\" changebrightness {value}")
+            return self.success(f"Brightness increased by {value}%")
+
+        if mode == "dec":
+            self._run(f"\"{self.NIRCMD}\" changebrightness -{value}")
+            return self.success(f"Brightness decreased by {value}%")
+
         value = max(0, min(100, value))
         self._run(f"\"{self.NIRCMD}\" setbrightness {value}")
         return self.success(f"Brightness set to {value}%")
     
 
-    @action(name="volume", params={"value"})
-    def volume(self, value):
+    @action(name="volume", params={"value", "mode"})
+    def set_volume(self, value, mode="set"):
+        if mode not in ("set", "inc", "dec"):
+            return self.failure("Invalid mode")
+        
+        if mode == "inc":
+            self._run(f"\"{self.NIRCMD}\" changesysvolume {int(65535 * (value / 100))}")
+            return self.success(f"Volume increased by {value}%")
+
+        if mode == "dec":
+            self._run(f"\"{self.NIRCMD}\" changesysvolume -{int(65535 * (value / 100))}")
+            return self.success(f"Volume decreased by {value}%")
+
         system_value = int(65535 * (value / 100))
         self._run(f"\"{self.NIRCMD}\" setsysvolume {system_value}")
         return self.success(f"Volume set to {value}%")
+    
+
+    @action(name="datetime")
+    def get_datetime(self):
+        tz = pytz.timezone("Asia/Kolkata")
+        now = datetime.now(tz)
+        date, day, time = now.date(), now.strftime("%A"), now.strftime("%H:%M:%S")
+        return self.success(
+            f"Datetime fetched successfully.",
+            data={"day": day, "time": str(time), "date": str(date)}
+        )
+    
+
+    @action(name="battery")
+    def get_battery_status(self):
+        battery = psutil.sensors_battery()
+        return self.success(
+            f"Battery status fetched successfully",
+            data={"percent": battery.percent, "is_plugged": battery.power_plugged}
+        )
+
     
 
 if __name__ == "__main__":
