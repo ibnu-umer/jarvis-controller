@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import threading
 import requests
 from configs.config import WIN_HOST, WIN_PORT
-from src.core.registry import MODULE_INSTANCES, FUNCTION_REGISTRY
+from core.registry import MODULE_REGISTRY, FUNCTION_REGISTRY
 
 
 
@@ -23,7 +23,7 @@ class WindowsListener:
             if not func_info:
                 return jsonify({"error": f"Unknown action: {name}"}), 404
 
-            instance = MODULE_INSTANCES.get(func_info["class"])
+            instance = MODULE_REGISTRY.get(func_info["class"])
             if not instance:
                 return jsonify({"error": f"No module instance for class {func_info['class']}"}), 500
 

@@ -1,7 +1,6 @@
-import importlib, os
-from src.core.base_module import BaseModule
+import importlib
 import pkgutil
-from src import modules
+from modules import __path__ as modules_path
 
 
 
@@ -26,22 +25,40 @@ def action(name=None, params=None):
 
 
 
-MODULE_INSTANCES = {}
+class ModuleRegistry:
+    def __init__(self):
+        self._instances = {}
 
-def load_all_modules():
-    for _, module_name, _ in pkgutil.iter_modules(modules.__path__):
-        full_path = f"src.modules.{module_name}"
+    def register(self, cls):
         try:
-            importlib.import_module(full_path)
-        except Exception as e:
-            print(f"❌ Failed to import {full_path}: {e}")
-
-    for cls in BaseModule.__subclasses__():
-        try:
-            MODULE_INSTANCES[cls.__name__] = cls()
+            instance = cls()
+            self._instances[cls.__name__] = instance
+            return instance
         except Exception as e:
             print(f"❌ Failed to instantiate {cls.__name__}: {e}")
+            return None
+
+    def get(self, cls_name):
+        return self._instances.get(cls_name)
+
+    def load_all_modules(self):
+        # Dynamically import all modules inside src/modules
+        for _, module_name, _ in pkgutil.iter_modules(modules_path):
+            full_path = f"modules.{module_name}"  # note: relative import
+            try:
+                importlib.import_module(full_path)
+            except Exception as e:
+                print(f"❌ Failed to import {full_path}: {e}")
+
+        # Explicitly register subclasses
+        from core.base_module import BaseModule
+        for cls in BaseModule.__subclasses__():
+            self.register(cls)
 
 
-        
+
+MODULE_REGISTRY = ModuleRegistry()
+
+def load_registry():
+    MODULE_REGISTRY.load_all_modules()        
 
