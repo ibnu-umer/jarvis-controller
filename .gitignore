@@ -7,6 +7,5 @@ test.py
 
 build
 dist
-*.spec
 
 logs

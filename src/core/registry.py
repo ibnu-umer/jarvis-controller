@@ -2,6 +2,8 @@ import importlib
 import pkgutil
 from modules import __path__ as modules_path
 from core.logger import logger
+from core.base_module import BaseModule
+
 
 
 
@@ -36,7 +38,7 @@ class ModuleRegistry:
             self._instances[cls.__name__] = instance
             return instance
         except Exception as e:
-            print(f"❌ Failed to instantiate {cls.__name__}: {e}")
+            logger.error(f"Failed to instantiate {cls.__name__}: {e}")
             return None
 
     def get(self, cls_name):
@@ -44,15 +46,15 @@ class ModuleRegistry:
 
     def load_all_modules(self):
         # Dynamically import all modules inside src/modules
+        logger.debug(f"Modules Path: {modules_path}")
         for _, module_name, _ in pkgutil.iter_modules(modules_path):
-            full_path = f"modules.{module_name}"  # note: relative import
+            full_path = f"modules.{module_name}" 
             try:
                 importlib.import_module(full_path)
             except Exception as e:
-                print(f"❌ Failed to import {full_path}: {e}")
+                logger.error(f"Failed to import {full_path}: {e}")
 
         # Explicitly register subclasses
-        from core.base_module import BaseModule
         for cls in BaseModule.__subclasses__():
             self.register(cls)
 

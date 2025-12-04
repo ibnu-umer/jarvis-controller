@@ -4,7 +4,7 @@ import shutil
 import subprocess
 
 def clean():
-    for path in ["build", "dist", "run_tray.spec"]:
+    for path in ["build", "dist"]:
         if os.path.exists(path):
             if os.path.isfile(path):
                 os.remove(path)
@@ -15,12 +15,7 @@ def build():
     subprocess.run([
         "pyinstaller",
         "--noconfirm",
-        "--onefile",
-        "--windowed",
-        "--name", "JarvisTray",
-        "--manifest", "JarvisTray.exe.manifest",
-        "--paths", "src",
-        "run_tray.py"
+        "JarvisTray.spec"
     ], check=True)
 
 
