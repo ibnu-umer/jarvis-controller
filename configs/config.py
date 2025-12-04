@@ -16,3 +16,4 @@ WSL_BASE_URL = f"http://{WSL_HOST}:{WSL_PORT}"
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG_FILE = "logs/app.log"
+FILE_REGISTRY_PATH = "data/file_registry.json"

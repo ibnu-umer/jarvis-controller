@@ -1,0 +1,17 @@
+{
+    "downloads": "C:\\Users\\user\\Downloads",
+    "documents": "C:\\Users\\user\\Documents",
+    "desktop": "C:\\Users\\user\\Desktop",
+    "pictures": "C:\\Users\\user\\Pictures",
+    "music": "C:\\Users\\user\\Music",
+    "videos": "C:\\Users\\user\\Videos",
+    "appdata_roaming": "C:\\Users\\user\\AppData\\Roaming",
+    "appdata_local": "C:\\Users\\user\\AppData\\Local",
+    "program_files": "C:\\Program Files",
+    "program_files_x86": "C:\\Program Files (x86)",
+    "windows": "C:\\Windows",
+    "temp": "C:\\Users\\user\\AppData\\Local\\Temp",
+    "projects": "\\\\wsl$\\Ubuntu\\home\\user\\projects",
+    "win_projects": "C:\\Users\\user\\projects",
+    "jarvis_logs": "C:\\Users\\user\\projects\\jarvis_controller\\logs\\app.log"
+}
