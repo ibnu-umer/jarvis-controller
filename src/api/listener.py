@@ -34,14 +34,18 @@ class WindowsListener:
 
             params = request.json or {}
             try:
-                result = action_func(**params)
-                return jsonify({
+                res = action_func(**params)
+                result = {
                     "status": "success",
                     "action": name,
-                    "result": result
-                })
+                    "result": res
+                }
+                logger.info(res)
+                return jsonify(result)
             except Exception as e:
-                return jsonify({"error": str(e)}), 500
+                result = {"error": str(e)}
+                logger.info(result)
+                return jsonify(result), 500
 
            
         
