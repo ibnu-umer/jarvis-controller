@@ -14,6 +14,7 @@
     "projects": "\\\\wsl$\\Ubuntu\\home\\user\\projects",
     "win_projects": "C:\\Users\\user\\projects",
     "jarvis_logs": "C:\\Users\\user\\projects\\jarvis_controller\\logs\\app.log",
+
     "vscode": "C:\\Program Files\\Microsoft VS Code\\Code.exe",
     "chrome": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
     "edge": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
@@ -25,5 +26,11 @@
     "calculator": "C:\\Windows\\System32\\calc.exe",
     "cmd": "C:\\Windows\\System32\\cmd.exe",
     "powershell": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-    "explorer": "C:\\Windows\\explorer.exe"
+    "explorer": "C:\\Windows\\explorer.exe",
+
+    "settings": "ms-settings:",
+    "system_settings": "ms-settings:system",
+    "display_settings": "ms-settings:display",
+    "network_settings": "ms-settings:network",
+    "apps_settings": "ms-settings:appsfeatures"
 }

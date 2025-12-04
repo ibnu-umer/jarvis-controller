@@ -3,6 +3,7 @@ from core.registry import action, registry
 from core.base_module import BaseModule
 from configs.config import PROCESS_NAMES_PATH
 from core.logger import logger
+from pathlib import Path
 
 
 
@@ -28,8 +29,9 @@ class AppController(BaseModule):
             if isinstance(app_path, str) and app_path.startswith(("http://", "https://")):
                 browser_path = self.registry.get_path(browser)
                 webbrowser.get(f'"{browser_path}" %s').open(app_path)
+            elif isinstance(app_path, str) and app_path.startswith("ms"):
+                subprocess.run(f'start "" "{app_path}"', shell=True)
             else:
-                from pathlib import Path
                 path = Path(app_path)
 
                 if path.exists() and path.is_file() and path.suffix.lower() in (".exe", ".bat", ".cmd", ".msi"):
