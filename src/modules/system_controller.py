@@ -114,13 +114,17 @@ class SystemController(BaseModule):
     def toggle_wifi(self, mode):
         interface_name = "WiFi"
 
-        if mode == "on":
+        if mode == "enable":
             self._run(f"netsh interface set interface {interface_name} enable")
-            return self.success("Wi-Fi turned ON")
+            return self.success("Wi-Fi enable")
 
-        if mode == "off":
+        elif mode == "disabled":
             self._run(f"netsh interface set interface {interface_name} disable")
-            return self.success("Wi-Fi turned OFF")
+            return self.success("Wi-Fi disabled")
+        
+        elif mode == "disconnect":
+            self._run("netsh wlan disconnect")
+            return self.success("Wi-Fi disconnected")
 
         return self.failure("Invalid mode")
     
@@ -128,12 +132,12 @@ class SystemController(BaseModule):
 
     @action(name="bluetooth", params={"mode"})
     def toggle_bluetooth(self, mode):
-        if mode == "on":
-            self._run('powershell "Start-Service bthserv"')
+        if mode == "enable":
+            self._run('powershell "Get-PnpDevice -Class Bluetooth | Enable-PnpDevice -Confirm:$false"')
             return self.success("Bluetooth enabled")
 
-        if mode == "off":
-            self._run('powershell "Stop-Service bthserv"')
+        if mode == "disable":
+            self._run('powershell "Get-PnpDevice -Class Bluetooth | Disable-PnpDevice -Confirm:$false"')
             return self.success("Bluetooth disabled")
 
         return self.failure("Invalid mode")
