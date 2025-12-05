@@ -1,4 +1,5 @@
-import subprocess, psutil, os, webbrowser, json, win32gui, win32con, win32process
+import subprocess, psutil, os, webbrowser, json
+import win32gui, win32con, win32process, win32api
 from core.registry import action, registry
 from core.base_module import BaseModule
 from configs.config import PROCESS_NAMES_PATH
@@ -142,6 +143,140 @@ class AppController(BaseModule):
             return self.failure(f"Failed to focus window: {e}")
 
 
+    @action(name="minimize_app", params={"app_name"})
+    def minimize_app(self, app_name: str):
+        process = self.process_names.get(app_name, app_name).lower()
+        windows = self._get_windows_by_process_and_title(process)
+
+        if not windows:
+            return self.failure(f"No visible window found for {process}")
+
+        hwnd = windows[0]["hwnd"]
+
+        try:
+            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+            return self.success(f"Minimized {process}", data={"hwnd": hwnd})
+
+        except Exception as e:
+            return self.failure(f"Failed to minimize {process}: {e}")
+        
+
+    @action(name="maximize_app", params={"app_name"})
+    def maximize_app(self, app_name: str):
+        process = self.process_names.get(app_name, app_name).lower()
+        windows = self._get_windows_by_process_and_title(process)
+
+        if not windows:
+            return self.failure(f"No visible window found for {process}")
+
+        hwnd = windows[0]["hwnd"]
+
+        try:
+            win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+            return self.success(f"Maximized {process}", data={"hwnd": hwnd})
+
+        except Exception as e:
+            return self.failure(f"Failed to maximize {process}: {e}")
+
+
+    @action(name="restore_app", params={"app_name"})
+    def restore_app(self, app_name: str):
+        process = self.process_names.get(app_name, app_name).lower()
+        windows = self._get_windows_by_process_and_title(process)
+
+        if not windows:
+            return self.failure(f"No visible window found for {process}")
+
+        hwnd = windows[0]["hwnd"]
+
+        try:
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            return self.success(f"Restored {process}", data={"hwnd": hwnd})
+
+        except Exception as e:
+            return self.failure(f"Failed to restore {process}: {e}")
+
+
+    @action(name="move_resize_app", params={"app_name", "x", "y", "width", "height"})
+    def move_resize_app(self, app_name: str, x: int, y: int, width: int, height: int):
+        process = self.process_names.get(app_name, app_name).lower()
+        windows = self._get_windows_by_process_and_title(process)
+
+        if not windows:
+            return self.failure(f"No visible window found for {process}")
+
+        hwnd = windows[0]["hwnd"]
+
+        try:
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)  # ensure window is not minimized
+            win32gui.SetWindowPos(
+                hwnd,
+                None,
+                x, y,
+                width, height,
+                win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+            )
+            return self.success(
+                f"Moved and resized {process}",
+                data={"hwnd": hwnd, "x": x, "y": y, "w": width, "h": height}
+            )
+
+        except Exception as e:
+            return self.failure(f"Failed to move/resize {process}: {e}")
+
+
+    @action(name="snap_window", params={"app_name", "position"})
+    def snap_window(self, app_name: str, position: str = "right"):
+        position = position.lower()
+        if position not in ["left", "right", "top", "bottom"]:
+            return self.failure("Invalid position. Use left/right/top/bottom.")
+
+        process = self.process_names.get(app_name, app_name).lower()
+        windows = self._get_windows_by_process_and_title(process)
+
+        if not windows or process == "explorer" and len(windows) <= 1:
+            return self.failure(f"No visible window found for {process}")
+
+        hwnd = windows[0]["hwnd"]
+
+        try:
+            screen_w = win32api.GetSystemMetrics(0)
+            screen_h = win32api.GetSystemMetrics(1)
+
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+
+            if position == "left":
+                x, y = 0, 0
+                w, h = screen_w // 2, screen_h
+
+            elif position == "right":
+                x, y = screen_w // 2, 0
+                w, h = screen_w // 2, screen_h
+
+            elif position == "top":
+                x, y = 0, 0
+                w, h = screen_w, screen_h // 2
+
+            else:  # bottom
+                x, y = 0, screen_h // 2
+                w, h = screen_w, screen_h // 2
+
+            win32gui.SetWindowPos(
+                hwnd,
+                None,
+                x, y, w, h,
+                win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+            )
+
+            return self.success(f"Snapped {process} {position}", data={"hwnd": hwnd})
+
+        except Exception as e:
+            return self.failure(f"Failed snapping {position}: {e}")
+
+    # --------- Multi instances and state ----------
+
+    
+
 
 
 
@@ -160,7 +295,6 @@ class AppController(BaseModule):
             except psutil.NoSuchProcess:
                 return
             
-            # print(target_proc, proc.name())
 
             if proc.name().lower().split(".")[0] != target_proc.lower():
                 return
