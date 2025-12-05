@@ -273,10 +273,103 @@ class AppController(BaseModule):
         except Exception as e:
             return self.failure(f"Failed snapping {position}: {e}")
 
+
     # --------- Multi instances and state ----------
 
-    
+    @action(name="is_running", params={"app_name"})
+    def is_running(self, app_name: str):
+        process = self.process_names.get(app_name, app_name).lower()
 
+        try:
+            for proc in psutil.process_iter(["name"]):
+                try:
+                    name = proc.info["name"]
+                    if name and name.lower().split(".")[0] == process:
+                        return self.success(f"{process} is running", data={"running": True})
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            return self.failure(f"{process} is not running", data={"running": False})
+
+        except Exception as e:
+            return self.failure(f"Error while checking process: {e}", data={"running": False})
+
+
+    @action(name="list_instances", params={"app_name"})
+    def list_instances(self, app_name: str):
+        process = self.process_names.get(app_name, app_name).lower()
+        instances = []
+
+        try:
+            windows = self._get_windows_by_process_and_title(process)
+            for w in windows:
+                instances.append({
+                    "hwnd": w["hwnd"],
+                    "title": w["title"],
+                    "pid": w["pid"]
+                })
+
+            # Include running processes that may not have visible windows
+            for proc in psutil.process_iter(["pid", "name"]):
+                try:
+                    name = proc.info["name"]
+                    if name and name.lower().split(".")[0] == process:
+                        if not any(inst["pid"] == proc.pid for inst in instances):
+                            instances.append({
+                                "hwnd": None,
+                                "title": None,
+                                "pid": proc.pid
+                            })
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            if not instances:
+                return self.failure(f"No running instances of {process}", data={"instances": []})
+
+            return self.success(f"Found {len(instances)} instances of {process}", data={"instances": instances})
+
+        except Exception as e:
+            return self.failure(f"Error listing instances: {e}", data={"instances": []})
+
+
+    @action(name="switch_instance", params={"app_name", "instance_number"})
+    def switch_instance(self, app_name: str, instance_number: int):
+        process = self.process_names.get(app_name, app_name).lower()
+        instances_result = self.list_instances(app_name)
+
+        if not instances_result["success"] or not instances_result["data"]["instances"]:
+            return self.failure(f"No running instances of {process} to switch")
+
+        instances = instances_result["data"]["instances"]
+
+        if instance_number < 1 or instance_number > len(instances):
+            return self.failure(f"Instance number {instance_number} out of range (1-{len(instances)})")
+
+        target = instances[instance_number - 1]
+        hwnd = target.get("hwnd")
+        pid = target.get("pid")
+        title = target.get("title") or f"PID {pid}"
+
+        if hwnd is None:
+            return self.failure(f"Instance {instance_number} ({title}) has no visible window to focus")
+
+        try:
+            # Restore window if minimized
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+
+            # Proper focus handling
+            fg = win32gui.GetForegroundWindow()
+            fg_thread, _ = win32process.GetWindowThreadProcessId(fg)
+            target_thread, _ = win32process.GetWindowThreadProcessId(hwnd)
+
+            win32process.AttachThreadInput(fg_thread, target_thread, True)
+            win32gui.SetForegroundWindow(hwnd)
+            win32process.AttachThreadInput(fg_thread, target_thread, False)
+
+            return self.success(f"Switched focus to instance {instance_number} ({title})", data={"hwnd": hwnd, "pid": pid})
+
+        except Exception as e:
+            return self.failure(f"Failed to switch to instance {instance_number} ({title}): {e}")
 
 
 
