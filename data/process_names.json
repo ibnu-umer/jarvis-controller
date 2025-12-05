@@ -1,4 +1,5 @@
 {
     "vscode": "Code",
-    "edge": "msedge"
+    "edge": "msedge",
+    "store": "winstore"
 }
