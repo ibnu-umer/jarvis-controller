@@ -16,6 +16,10 @@ class AppController(BaseModule):
         with open(PROCESS_NAMES_PATH, "r") as file:
             self.process_names = json.load(file)
 
+        self.UWP_HOSTS = ("applicationframehost")
+
+
+    # ------------- Launch & close functions ------------ 
 
     @action(name="open_app", params={"app_name", "app_path", "browser"})
     def open_app(self, app_name: str = None, app_path: str = None, browser: str = "chrome"):
@@ -49,45 +53,86 @@ class AppController(BaseModule):
     @action(name="close_app", params={"app_name"})
     def close_app(self, app_name: str):
         process_name = self.process_names.get(app_name, app_name).lower()
-        closed = False
+        windows = self._get_app_windows(process_name)
 
-        def enum_window_callback(hwnd, _):
-            nonlocal closed
-            if not win32gui.IsWindowVisible(hwnd) or not win32gui.GetWindowText(hwnd):
-                return True
+        if not windows:
+            return self.failure(f"No visible window found for {app_name}")
+        
+        if process_name == "explorer" and len(windows) <= 1:
+            return self.failure(f"No visible window found for explorer")
+        print(windows)
+        
+        hwnd = windows[0]
+        win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+        return self.success(f"Closed one instance of {app_name}", data={"hwnd": hwnd, "closed": True})
+    
 
+    @action(name="close_all_instances", params={"app_name", "force"})
+    def close_all_instances(self, app_name: str, force: bool = False):
+        process_name = self.process_names.get(app_name, app_name).lower()
+
+        if force:  # Kill every instances on the process directly
+            
+            if process_name == "explorer":
+                return self.failure("Cannot force stop explorer")  # it will distroy other windows tools
+
+            killed = 0
+            for proc in psutil.process_iter(["pid", "name"]):
+                try:
+                    if proc.info["name"] and proc.info["name"].lower().split(".")[0] == process_name:
+                        proc.kill()
+                        killed += 1
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            if killed == 0:
+                return self.failure(f"No running processes found for {app_name}", data={"killed": 0})
+
+            return self.success(f"Force-killed {killed} instances of {app_name}", data={"killed": killed})
+
+        # Close all visible windows of the process
+        windows = self._get_app_windows(process_name)
+
+        if not windows:
+            return self.failure(f"No visible windows found for {app_name}", data={"closed": 0})
+
+        closed_count = 0
+        for hwnd in windows:
             try:
-                _, pid = win32process.GetWindowThreadProcessId(hwnd)
-                proc = psutil.Process(pid)
-                exe = proc.name().lower()
-                if exe.split(".")[0] == process_name:
-                    win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-                    closed = True
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+                closed_count += 1
+            except:
                 pass
 
+        return self.success(
+            f"Closed {closed_count} visible windows of {app_name}",
+            data={"closed": closed_count}
+        )
+
+
+    # --------- Helpers -------------
+
+    def _get_app_windows(self, process_name: str):
+        windows = []
+        process_name = self.process_names.get(process_name, process_name)
+       
+        def callback(hwnd, _):
+            if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
+                try:
+                    _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                    proc = psutil.Process(pid)
+                    exe = proc.name().lower().split(".")[0]
+                    if exe == process_name  or exe in self.UWP_HOSTS:
+                        windows.append(hwnd)
+                except:
+                    pass
             return True
 
-        try:
-            win32gui.EnumWindows(enum_window_callback, None)
-        except Exception:
-            pass
+        win32gui.EnumWindows(callback, None)
+        return windows
 
-        if closed:
-            return self.success(f"Closed {app_name}", data={"closed": True})
 
-        for proc in psutil.process_iter(["name"]):
-            try:
-                if proc.info["name"] and proc.info["name"].lower().split(".")[0] == process_name:
-                    return self.failure(
-                        f"{app_name} running in background but has no window to close.",
-                        data={"closed": False, "background": True}
-                    )
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                continue
-
-        return self.failure(f"No running instance of {app_name}", data={"closed": False})
-    
+    # ------------- Window management --------------
 
     @action(name="focus_app", params={"app_name"})
     def focus_app(self, app_name: str):
