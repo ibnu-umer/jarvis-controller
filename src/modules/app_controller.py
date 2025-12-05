@@ -16,8 +16,6 @@ class AppController(BaseModule):
         with open(PROCESS_NAMES_PATH, "r") as file:
             self.process_names = json.load(file)
 
-        self.UWP_HOSTS = ("applicationframehost")
-
 
     # ------------- Launch & close functions ------------ 
 
@@ -53,16 +51,17 @@ class AppController(BaseModule):
     @action(name="close_app", params={"app_name"})
     def close_app(self, app_name: str):
         process_name = self.process_names.get(app_name, app_name).lower()
-        windows = self._get_app_windows(process_name)
+        windows = self._get_windows_by_process_and_title(process_name)
+        if not windows: # if not got, then check for the applicationframehost
+            windows = self._get_windows_by_process_and_title("applicationframehost", process_name)
 
         if not windows:
             return self.failure(f"No visible window found for {app_name}")
         
         if process_name == "explorer" and len(windows) <= 1:
             return self.failure(f"No visible window found for explorer")
-        print(windows)
         
-        hwnd = windows[0]
+        hwnd = windows[0]["hwnd"]
         win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
         return self.success(f"Closed one instance of {app_name}", data={"hwnd": hwnd, "closed": True})
     
@@ -72,7 +71,7 @@ class AppController(BaseModule):
         process_name = self.process_names.get(app_name, app_name).lower()
 
         if force:  # Kill every instances on the process directly
-            
+
             if process_name == "explorer":
                 return self.failure("Cannot force stop explorer")  # it will distroy other windows tools
 
@@ -110,57 +109,65 @@ class AppController(BaseModule):
         )
 
 
-    # --------- Helpers -------------
-
-    def _get_app_windows(self, process_name: str):
-        windows = []
-        process_name = self.process_names.get(process_name, process_name)
-       
-        def callback(hwnd, _):
-            if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
-                try:
-                    _, pid = win32process.GetWindowThreadProcessId(hwnd)
-                    proc = psutil.Process(pid)
-                    exe = proc.name().lower().split(".")[0]
-                    if exe == process_name  or exe in self.UWP_HOSTS:
-                        windows.append(hwnd)
-                except:
-                    pass
-            return True
-
-        win32gui.EnumWindows(callback, None)
-        return windows
-
-
     # ------------- Window management --------------
 
     @action(name="focus_app", params={"app_name"})
     def focus_app(self, app_name: str):
-        if app_name in self.process_names:
-            app_name = self.process_names[app_name].lower()
+        process_name = self.process_names.get(app_name, app_name).lower()
+        windows = self._get_windows_by_process_and_title(process_name)
+        if not windows: # if not got, then check for the applicationframehost
+            windows = self._get_windows_by_process_and_title("applicationframehost", process_name)
 
-        focused = False
+        if not windows:
+            return self.failure(f"No visible window found for {process_name}")
 
-        def callback(hwnd, _):
-            nonlocal focused
-            title = win32gui.GetWindowText(hwnd).lower()
-
-            if app_name in title and win32gui.IsWindowVisible(hwnd):
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)  # if minimized
-                win32gui.SetForegroundWindow(hwnd)
-                focused = True
-                return False  
-
-            return True 
+        # The first verified match
+        hwnd = windows[0]["hwnd"]   
+        title = windows[0]["title"]
 
         try:
-            win32gui.EnumWindows(callback, None)
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+
+            fg = win32gui.GetForegroundWindow()
+            fg_thread, _ = win32process.GetWindowThreadProcessId(fg)
+            target_thread, _ = win32process.GetWindowThreadProcessId(hwnd)
+
+            win32process.AttachThreadInput(fg_thread, target_thread, True)
+            win32gui.SetForegroundWindow(hwnd)
+            win32process.AttachThreadInput(fg_thread, target_thread, False)
+
+            return self.success(f"Focused {title}", data={"hwnd": hwnd})
+
         except Exception as e:
-            logger.error(f"Error while focusing windows: {e}")
-
-        if focused:
-            return self.success(f"Focus changed to {app_name}")
-        else:
-            return self.failure(f"No window found for {app_name}")
+            return self.failure(f"Failed to focus window: {e}")
 
 
+
+
+
+    # --------- Helpers -------------
+
+    def _get_windows_by_process_and_title(self, target_proc, target_title=None):
+        results = []
+
+        def callback(hwnd, _):
+            if not win32gui.IsWindowVisible(hwnd) or not win32gui.IsWindowEnabled(hwnd):
+                return
+
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            try:
+                proc = psutil.Process(pid)
+            except psutil.NoSuchProcess:
+                return
+            
+            # print(target_proc, proc.name())
+
+            if proc.name().lower().split(".")[0] != target_proc.lower():
+                return
+
+            title = win32gui.GetWindowText(hwnd)
+            if title and (target_title is None or target_title.lower() in title.lower()):
+                results.append({"hwnd": hwnd, "title": title, "pid": pid})
+
+        win32gui.EnumWindows(callback, None)
+        return results
