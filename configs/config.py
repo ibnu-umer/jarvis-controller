@@ -18,3 +18,4 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG_FILE = "logs/app.log"
 FILE_REGISTRY_PATH = "data/file_registry.json"
 PROCESS_NAMES_PATH = "data/process_names.json"
+SCREENSHOTS_FOLDER = "data/screenshots"

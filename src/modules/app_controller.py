@@ -4,7 +4,7 @@ from core.registry import action, registry
 from core.base_module import BaseModule
 from configs.config import PROCESS_NAMES_PATH, SCREENSHOTS_FOLDER
 from pathlib import Path        
-from PIL import ImageGrab
+from PIL.ImageGrab import grab
 
 
 
@@ -464,7 +464,7 @@ class AppController(BaseModule):
             left, top = win32gui.ClientToScreen(hwnd, (left, top))
             right, bottom = win32gui.ClientToScreen(hwnd, (right, bottom))
 
-            img = ImageGrab.grab(bbox=(left, top, right, bottom))
+            img = grab(bbox=(left, top, right, bottom))
 
             
             os.makedirs(SCREENSHOTS_FOLDER, exist_ok=True)
