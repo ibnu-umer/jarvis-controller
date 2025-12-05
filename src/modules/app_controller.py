@@ -1,10 +1,11 @@
-import subprocess, psutil, os, webbrowser, json
-import win32gui, win32con, win32process, win32api
+import subprocess, psutil, os, webbrowser, json, time, pythoncom
+import win32gui, win32con, win32process, win32api, win32com.client
 from core.registry import action, registry
 from core.base_module import BaseModule
-from configs.config import PROCESS_NAMES_PATH
-from core.logger import logger
-from pathlib import Path
+from configs.config import PROCESS_NAMES_PATH, SCREENSHOTS_FOLDER
+from pathlib import Path        
+from PIL import ImageGrab
+
 
 
 
@@ -370,6 +371,223 @@ class AppController(BaseModule):
 
         except Exception as e:
             return self.failure(f"Failed to switch to instance {instance_number} ({title}): {e}")
+
+
+    # --------- Shortcuts or automation ---------------
+
+    @action(name="send_key", params={"app_name", "key_combo"})
+    def send_key(self, app_name: str, key_combo: str):
+        windows = self._get_windows_by_process_and_title(self.process_names.get(app_name, app_name))
+        if not windows:
+            return self.failure(f"No visible window found for {app_name}")
+
+        hwnd = windows[0]["hwnd"]
+
+        try:
+            # Focus window first
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            fg = win32gui.GetForegroundWindow()
+            fg_thread, _ = win32process.GetWindowThreadProcessId(fg)
+            target_thread, _ = win32process.GetWindowThreadProcessId(hwnd)
+            win32process.AttachThreadInput(fg_thread, target_thread, True)
+            win32gui.SetForegroundWindow(hwnd)
+            win32process.AttachThreadInput(fg_thread, target_thread, False)
+
+            # Parse simple key combos like "ctrl+c", "alt+tab"
+            keys = key_combo.lower().split("+")
+            key_map = {
+                "ctrl": win32con.VK_CONTROL,
+                "alt": win32con.VK_MENU,
+                "shift": win32con.VK_SHIFT,
+                "win": win32con.VK_LWIN,
+            }
+
+            # Press keys down
+            for k in keys:
+                vk = key_map.get(k, ord(k.upper()))
+                win32api.keybd_event(vk, 0, 0, 0)
+                time.sleep(0.02)
+
+            # Release keys
+            for k in reversed(keys):
+                vk = key_map.get(k, ord(k.upper()))
+                win32api.keybd_event(vk, 0, win32con.KEYEVENTF_KEYUP, 0)
+                time.sleep(0.02)
+
+            return self.success(f"Sent key combo '{key_combo}' to {app_name}", data={"hwnd": hwnd})
+
+        except Exception as e:
+            return self.failure(f"Failed to send key combo to {app_name}: {e}")
+
+
+    @action(name="send_text", params={"app_name", "text"})
+    def send_text(self, app_name: str, text: str):
+        windows = self._get_windows_by_process_and_title(self.process_names.get(app_name, app_name))
+        if not windows:
+            return self.failure(f"No visible window found for {app_name}")
+
+        hwnd = windows[0]["hwnd"]
+
+        try:
+            # Focus window first
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            fg = win32gui.GetForegroundWindow()
+            fg_thread, _ = win32process.GetWindowThreadProcessId(fg)
+            target_thread, _ = win32process.GetWindowThreadProcessId(hwnd)
+            win32process.AttachThreadInput(fg_thread, target_thread, True)
+            win32gui.SetForegroundWindow(hwnd)
+            win32process.AttachThreadInput(fg_thread, target_thread, False)
+
+            # Type each character
+            for char in text:
+                vk = ord(char.upper())
+                win32api.keybd_event(vk, 0, 0, 0)
+                win32api.keybd_event(vk, 0, win32con.KEYEVENTF_KEYUP, 0)
+                time.sleep(0.02)
+
+            return self.success(f"Sent text to {app_name}", data={"hwnd": hwnd})
+
+        except Exception as e:
+            return self.failure(f"Failed to send text to {app_name}: {e}")
+        
+
+    @action(name="screenshot_app", params={"app_name"})
+    def screenshot_app(self, app_name: str):
+        windows = self._get_windows_by_process_and_title(self.process_names.get(app_name, app_name))
+        if not windows:
+            return self.failure(f"No visible window found for {app_name}")
+
+        hwnd = windows[0]["hwnd"]
+
+        try:
+            left, top, right, bottom = win32gui.GetClientRect(hwnd)
+            left, top = win32gui.ClientToScreen(hwnd, (left, top))
+            right, bottom = win32gui.ClientToScreen(hwnd, (right, bottom))
+
+            img = ImageGrab.grab(bbox=(left, top, right, bottom))
+
+            
+            os.makedirs(SCREENSHOTS_FOLDER, exist_ok=True)
+            temp_path = f"{SCREENSHOTS_FOLDER}/{app_name}_screenshot.png"
+            img.save(temp_path)
+
+            return self.success(f"Screenshot captured for {app_name}", data={"hwnd": hwnd, "path": temp_path})
+
+        except Exception as e:
+            return self.failure(f"Failed to capture screenshot for {app_name}: {e}")
+
+
+    # ----------- Advanced Controls ---------------
+
+    @action(name="pin_to_taskbar", params={"app_name"})
+    def pin_to_taskbar(self, app_name: str):
+        path = self.registry.get_path(app_name)
+        if not path:
+            return self.failure(f"Path not found for {app_name}")
+
+        path = Path(path)
+        if not path.exists() or not path.is_file():
+            return self.failure(f"Invalid file path: {path}")
+
+        try:
+            pythoncom.CoInitialize()
+            shell = win32com.client.Dispatch("Shell.Application")
+            folder = shell.NameSpace(str(path.parent))
+            item = folder.ParseName(path.name)
+
+            # Check if 'Pin to Taskbar' verb exists
+            verbs = [v.Name.lower() for v in item.Verbs()]
+            if "pin to taskbar" in verbs:
+                for v in item.Verbs():
+                    if v.Name.lower() == "pin to taskbar":
+                        v.DoIt()
+                        return self.success(f"Pinned {app_name} to taskbar")
+            else:
+                return self.failure(f"'Pin to Taskbar' not available for {app_name}")
+
+        except Exception as e:
+            return self.failure(f"Failed to pin {app_name}: {e}")
+        
+
+    @action(name="unpin_from_taskbar", params={"app_name"})
+    def unpin_from_taskbar(self, app_name: str):
+        path = self.registry.get_path(app_name)
+        if not path:
+            return self.failure(f"Path not found for {app_name}")
+
+        path = Path(path)
+        if not path.exists() or not path.is_file():
+            return self.failure(f"Invalid file path: {path}")
+
+        try:
+            shell = win32com.client.Dispatch("Shell.Application")
+            folder = shell.NameSpace(str(path.parent))
+            item = folder.ParseName(path.name)
+
+            # Check if 'Unpin from Taskbar' verb exists
+            verbs = [v.Name.lower() for v in item.Verbs()]
+            if "unpin from taskbar" in verbs:
+                for v in item.Verbs():
+                    if v.Name.lower() == "unpin from taskbar":
+                        v.DoIt()
+                        return self.success(f"Unpinned {app_name} from taskbar")
+            else:
+                return self.failure(f"'Unpin from Taskbar' not available for {app_name}")
+
+        except Exception as e:
+            return self.failure(f"Failed to unpin {app_name}: {e}")
+        
+        finally:
+            pythoncom.CoUninitialize()
+
+
+    @action(name="get_app_info", params={"app_name"})
+    def get_app_info(self, app_name: str):
+        import psutil
+        from pathlib import Path
+        import win32process
+
+        path = self.registry.get_path(app_name)
+        if not path:
+            return self.failure(f"Path not found for {app_name}")
+
+        process_name = self.process_names.get(app_name, app_name).lower()
+        instances = []
+
+        # Gather all running instances
+        for proc in psutil.process_iter(["pid", "name", "memory_info"]):
+            try:
+                if proc.info["name"] and proc.info["name"].lower().split(".")[0] == process_name:
+                    mem = proc.info.get("memory_info")
+                    mem_usage = mem.rss if mem else None
+                    instances.append({
+                        "pid": proc.pid,
+                        "memory": mem_usage
+                    })
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        # Attempt to get version info
+        version = None
+        exe_path = Path(path)
+        if exe_path.exists() and exe_path.is_file():
+            try:
+                import win32api
+                info = win32api.GetFileVersionInfo(str(exe_path), "\\")
+                ms = info['FileVersionMS']
+                ls = info['FileVersionLS']
+                version = f"{ms >> 16}.{ms & 0xFFFF}.{ls >> 16}.{ls & 0xFFFF}"
+            except:
+                pass
+
+        return self.success(
+            f"App info for {app_name}",
+            data={
+                "path": path,
+                "version": version,
+                "instances": instances
+            }
+        )
 
 
 
