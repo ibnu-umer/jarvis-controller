@@ -26,3 +26,4 @@ LOG_FILE = "logs/app.log"
 FILE_REGISTRY_PATH = get_resource_path("configs/file_registry.json")
 PROCESS_NAMES_PATH = get_resource_path("configs/process_names.json")
 SCREENSHOTS_FOLDER = "data/screenshots"
+
