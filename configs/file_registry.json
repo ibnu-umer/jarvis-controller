@@ -27,8 +27,6 @@
     "cmd": "C:\\Windows\\System32\\cmd.exe",
     "powershell": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
     "explorer": "C:\\Windows\\explorer.exe",
-    "store": "ms-windows-store://home",
-    "taskmgr": "taskmgr.exe",
 
     "settings": "ms-settings:",
     "system_settings": "ms-settings:system",
