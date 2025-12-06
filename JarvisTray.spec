@@ -1,12 +1,22 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_submodules
+
+hidden_mods = collect_submodules('modules')
 
 a = Analysis(
     ['run_tray.py'],
     pathex=['src'],
     binaries=[],
-    datas=[('src/modules', 'modules')],
-    hiddenimports=['modules', 'pytz', 'psutil'],
+    datas=[
+        ('configs/file_registry.json', 'configs'),
+        ('configs/process_names.json', 'configs'),
+        ('src/modules', 'modules'),
+    ],
+    hiddenimports=hidden_mods + [
+        'pytz', 'psutil', 'pythoncom', 'win32gui', 'win32process',
+        'win32com', 'PIL.ImageGrab'
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -14,6 +24,7 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -31,9 +42,5 @@ exe = EXE(
     runtime_tmpdir=None,
     console=True,
     disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
     manifest='JarvisTray.exe.manifest',
 )
