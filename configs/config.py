@@ -17,13 +17,12 @@ WSL_BASE_URL = f"http://{WSL_HOST}:{WSL_PORT}"
 
 def get_resource_path(relative):
     if hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, relative)
+        return os.path.join(sys._MEIPASS, f"configs/{relative}")
     return os.path.join(os.path.dirname(__file__), relative)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG_FILE = "logs/app.log"
 
-FILE_REGISTRY_PATH = get_resource_path("configs/file_registry.json")
-PROCESS_NAMES_PATH = get_resource_path("configs/process_names.json")
+FILE_REGISTRY_PATH = get_resource_path("file_registry.json")
+PROCESS_NAMES_PATH = get_resource_path("process_names.json")
 SCREENSHOTS_FOLDER = "data/screenshots"
-
