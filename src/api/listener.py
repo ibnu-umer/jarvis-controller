@@ -47,7 +47,19 @@ class WindowsListener:
                 logger.info(result)
                 return jsonify(result), 500
 
-           
+
+        @self.app.route("/registry", methods=["GET"])
+        def registry():
+            safe_registry = {
+                name: {
+                    "module": meta.get("module"),
+                    "class": meta.get("class"),
+                    "function": meta.get("function"),
+                    "params": list(meta.get("params", [])) # convert params to list, because set cannot json encode
+                }
+                for name, meta in FUNCTION_REGISTRY.items()
+            }
+            return jsonify({"modules": safe_registry}), 200
         
 
         @self.app.route("/shutdown", methods=["GET"])
