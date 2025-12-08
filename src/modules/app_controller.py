@@ -1,6 +1,6 @@
 import subprocess, psutil, os, webbrowser, json, time, pythoncom
 import win32gui, win32con, win32process, win32api, win32com.client
-from core.registry import action, registry
+from core.registry import action, file_registry
 from core.base_module import BaseModule
 from configs.config import PROCESS_NAMES_PATH, SCREENSHOTS_FOLDER
 from pathlib import Path        
@@ -13,7 +13,7 @@ from PIL.ImageGrab import grab
 
 class AppController(BaseModule):
     def __init__(self):
-        self.registry = registry
+        self.file_registry = file_registry
         # load apps process names
         with open(PROCESS_NAMES_PATH, "r") as file:
             self.process_names = json.load(file)
@@ -24,14 +24,14 @@ class AppController(BaseModule):
     @action(name="open_app", params={"app_name", "app_path", "browser"})
     def open_app(self, app_name: str = None, app_path: str = None, browser: str = "chrome"):
         if app_name:
-            app_path = self.registry.get_path(app_name)
+            app_path = self.file_registry.get_path(app_name)
 
         if not app_path:
             return self.failure("App path not found.")
 
         try:
             if isinstance(app_path, str) and app_path.startswith(("http://", "https://")):
-                browser_path = self.registry.get_path(browser)
+                browser_path = self.file_registry.get_path(browser)
                 webbrowser.get(f'"{browser_path}" %s').open(app_path)
             elif isinstance(app_path, str) and app_path.startswith("ms"):
                 subprocess.run(f'start "" "{app_path}"', shell=True)
@@ -481,7 +481,7 @@ class AppController(BaseModule):
 
     @action(name="pin_to_taskbar", params={"app_name"})
     def pin_to_taskbar(self, app_name: str):
-        path = self.registry.get_path(app_name)
+        path = self.file_registry.get_path(app_name)
         if not path:
             return self.failure(f"Path not found for {app_name}")
 
@@ -511,7 +511,7 @@ class AppController(BaseModule):
 
     @action(name="unpin_from_taskbar", params={"app_name"})
     def unpin_from_taskbar(self, app_name: str):
-        path = self.registry.get_path(app_name)
+        path = self.file_registry.get_path(app_name)
         if not path:
             return self.failure(f"Path not found for {app_name}")
 
@@ -547,7 +547,7 @@ class AppController(BaseModule):
         from pathlib import Path
         import win32process
 
-        path = self.registry.get_path(app_name)
+        path = self.file_registry.get_path(app_name)
         if not path:
             return self.failure(f"Path not found for {app_name}")
 

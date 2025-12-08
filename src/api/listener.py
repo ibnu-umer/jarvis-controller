@@ -1,8 +1,7 @@
 from flask import Flask, request, jsonify
-import threading
-import requests
+import threading, requests, json
 from configs.config import WIN_HOST, WIN_PORT
-from core.registry import MODULE_REGISTRY, FUNCTION_REGISTRY
+from core.registry import MODULE_REGISTRY, FUNCTION_REGISTRY, file_registry
 from core.logger import logger
 
 
@@ -50,7 +49,7 @@ class WindowsListener:
 
         @self.app.route("/registry", methods=["GET"])
         def registry():
-            safe_registry = {
+            module_registry = {
                 name: {
                     "module": meta.get("module"),
                     "class": meta.get("class"),
@@ -59,7 +58,12 @@ class WindowsListener:
                 }
                 for name, meta in FUNCTION_REGISTRY.items()
             }
-            return jsonify({"modules": safe_registry}), 200
+
+            file_registry_list = file_registry.get_registered_files()
+            return jsonify({
+                "modules": module_registry,
+                "file_registry": file_registry_list
+            }), 200
         
 
         @self.app.route("/shutdown", methods=["GET"])

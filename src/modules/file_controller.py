@@ -11,7 +11,7 @@ from watchdog.events import FileSystemEventHandler
 from typing import List
 
 from core.base_module import BaseModule
-from core.registry import registry, action
+from core.registry import file_registry, action
 
 
 
@@ -19,7 +19,7 @@ from core.registry import registry, action
 
 class FileController(BaseModule):
     def __init__(self):
-        self.registry = registry
+        self.file_registry = file_registry
 
     # ------------------------- FILE OPERATIONS ------------------------- #
 
@@ -27,7 +27,7 @@ class FileController(BaseModule):
     def open_file(self, file_path: str = None, file_name: str = None, with_app: str = None):
         try:
             if file_name:
-                file_path = self.registry.get_path(file_name)
+                file_path = self.file_registry.get_path(file_name)
 
             if not file_path:
                 return self.failure("File path not provided.")
@@ -38,7 +38,7 @@ class FileController(BaseModule):
                 return self.failure(f"File does not exist or is not a file: {file_path}")
 
             if with_app:
-                app_path = self.registry.get_path(with_app)
+                app_path = self.file_registry.get_path(with_app)
                 if not app_path:
                     return self.failure(f"App not registered: {with_app}")
                 subprocess.Popen([app_path, str(file_path)])
@@ -126,7 +126,7 @@ class FileController(BaseModule):
     def open_folder(self, folder_path: str = None, folder_name: str = None, select_file: Optional[str] = None, focus: bool = True):
         try:
             if folder_name:
-                folder_path = self.registry.get_path(folder_name)
+                folder_path = self.file_registry.get_path(folder_name)
 
             if not folder_path:
                 return self.failure("Folder path not provided.")
