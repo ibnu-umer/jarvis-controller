@@ -26,3 +26,7 @@ LOG_FILE = "logs/app.log"
 FILE_REGISTRY_PATH = get_resource_path("file_registry.json")
 PROCESS_NAMES_PATH = get_resource_path("process_names.json")
 SCREENSHOTS_FOLDER = "data/screenshots"
+SCREENTIME_DATA = "data/screentime.json"
+
+SCREENTIME_TIMEOUT = 60
+SCREENTIME_POLL_INTERVAL = 1.0
