@@ -59,10 +59,10 @@ class WindowsListener:
                 for name, meta in FUNCTION_REGISTRY.items()
             }
 
-            file_registry_list = file_registry.get_registered_files()
+            file_registry_dict = file_registry.get_registered_files()
             return jsonify({
                 "modules": module_registry,
-                "file_registry": file_registry_list
+                "file_registry": file_registry_dict
             }), 200
         
 

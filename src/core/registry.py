@@ -127,8 +127,8 @@ class FileRegistry:
         return self.entries.copy()
     
 
-    def get_registered_files(self) -> list:
-        return list(self.entries)
+    def get_registered_files(self):
+        return self.entries
     
 
 file_registry = FileRegistry()
