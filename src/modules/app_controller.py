@@ -21,31 +21,44 @@ class AppController(BaseModule):
 
     # ------------- Launch & close functions ------------ 
 
-    @action(name="open_app", params={"app_name", "app_path", "browser"})
-    def open_app(self, app_name: str = None, app_path: str = None, browser: str = "chrome"):
+    @action(name="open_app", params={"app_name", "app_path", "browser", "folder_name", "folder_path"})
+    def open_app(self, app_name=None, app_path=None, browser="chrome", folder_name=None, folder_path=None):
+
+        # Resolve app path from registry
         if app_name:
             app_path = self.file_registry.get_path(app_name)
 
         if not app_path:
             return self.failure("App path not found.")
 
+        # Resolve folder path if provided by name
+        if folder_name:
+            folder_path = self.file_registry.get(folder_name)
+
+        # Cleanly build the command for launching Windows apps from WSL
+        def launch_windows_app(exe, arg=None):
+            if arg:
+                cmd = f'cmd.exe /c start "" "{exe}" "{arg}"'
+            else:
+                cmd = f'cmd.exe /c start "" "{exe}"'
+            return subprocess.Popen(cmd, shell=True)
+
         try:
-            if isinstance(app_path, str) and app_path.startswith(("http://", "https://")):
+            # Opening URL with custom browser
+            if app_path.startswith(("http://", "https://")):
                 browser_path = self.file_registry.get_path(browser)
                 webbrowser.get(f'"{browser_path}" %s').open(app_path)
-            elif isinstance(app_path, str) and app_path.startswith("ms"):
+                return self.success(f"Opened URL: {app_path}")
+
+            # ms-settings and similar URIs
+            if app_path.startswith("ms-"):
                 subprocess.run(f'start "" "{app_path}"', shell=True)
-            else:
-                path = Path(app_path)
+                return self.success(f"Opened Windows URI: {app_path}")
 
-                if path.exists() and path.is_file() and path.suffix.lower() in (".exe", ".bat", ".cmd", ".msi"):
-                    subprocess.Popen([str(path)])
-                elif path.exists() and path.is_file():
-                    os.startfile(str(path))
-                else:
-                    subprocess.Popen([app_path])
-
+            # Normal Windows app
+            launch_windows_app(app_path, folder_path)
             return self.success(f"App opened successfully: {app_path}")
+
         except Exception as e:
             return self.failure(f"Error opening {app_path}: {e}")
             
@@ -113,19 +126,35 @@ class AppController(BaseModule):
 
     # ------------- Window management --------------
 
-    @action(name="focus_app", params={"app_name"})
-    def focus_app(self, app_name: str):
+    @action(name="focus_app", params={"app_name", "title"})
+    def focus_app(self, app_name: str, title: str = None):
         process_name = self.process_names.get(app_name, app_name).lower()
+
+        # Try direct match
         windows = self._get_windows_by_process_and_title(process_name)
-        if not windows: # if not got, then check for the applicationframehost
-            windows = self._get_windows_by_process_and_title("applicationframehost", process_name)
+
+        # Fallback to ApplicationFrameHost
+        if not windows:
+            windows = self._get_windows_by_process_and_title(
+                "applicationframehost", process_name
+            )
 
         if not windows:
             return self.failure(f"No visible window found for {process_name}")
 
-        # The first verified match
-        hwnd = windows[0]["hwnd"]   
-        title = windows[0]["title"]
+        # Resolve the target window handle
+        hwnd, resolved_title = None, None
+        if title:
+            for w in windows:
+                if title in w["title"]:
+                    hwnd = w["hwnd"]
+                    resolved_title = w["title"]
+                    break
+            if hwnd is None:
+                return self.failure(f"No window found with title containing '{title}'")
+        else:
+            hwnd = windows[0]["hwnd"]
+            resolved_title = windows[0]["title"]
 
         try:
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
@@ -138,7 +167,7 @@ class AppController(BaseModule):
             win32gui.SetForegroundWindow(hwnd)
             win32process.AttachThreadInput(fg_thread, target_thread, False)
 
-            return self.success(f"Focused {title}", data={"hwnd": hwnd})
+            return self.success(f"Focused {resolved_title}", data={"hwnd": hwnd})
 
         except Exception as e:
             return self.failure(f"Failed to focus window: {e}")
