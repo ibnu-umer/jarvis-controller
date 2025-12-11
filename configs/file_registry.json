@@ -15,7 +15,7 @@
     "win_projects": "C:\\Users\\user\\projects",
     "jarvis_logs": "C:\\Users\\user\\projects\\jarvis_controller\\logs\\app.log",
 
-    "vscode": "C:\\Program Files\\Microsoft VS Code\\Code.exe",
+    "vscode": "C:\\Users\\user\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe",
     "chrome": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
     "edge": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
     "copilot": "C:\\Users\\<username>\\AppData\\Local\\GitHubCopilot\\GitHubCopilot.exe",
