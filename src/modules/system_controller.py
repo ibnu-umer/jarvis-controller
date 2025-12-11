@@ -59,6 +59,8 @@ class SystemController(BaseModule):
         if mode not in ("set", "inc", "dec"):
             return self.failure("Invalid mode")
         
+        value = 10 if not value else value
+
         if mode == "inc":
             self._run(f"\"{self.NIRCMD}\" changebrightness {value}")
             return self.success(f"Brightness increased by {value}%")
@@ -76,6 +78,8 @@ class SystemController(BaseModule):
     def set_volume(self, value, mode="set"):
         if mode not in ("set", "inc", "dec"):
             return self.failure("Invalid mode")
+
+        value = 10 if not value else value
         
         if mode == "inc":
             self._run(f"\"{self.NIRCMD}\" changesysvolume {int(65535 * (value / 100))}")
@@ -90,13 +94,23 @@ class SystemController(BaseModule):
         return self.success(f"Volume set to {value}%")
     
 
-    @action(name="datetime")
-    def get_datetime(self):
+    @action(name="datetime", params={"result"})
+    def get_datetime(self, result):
         tz = pytz.timezone("Asia/Kolkata")
         now = datetime.now(tz)
         date, day, time = now.date(), now.strftime("%A"), now.strftime("%H:%M:%S")
+
+        messages = {
+            "time": f"The time is {time}",
+            "date": f"Today is {date}",
+            "day": f"Today is {day}"
+        }
+        
+        if result not in messages:
+            return self.failure("Invalid result value")
+        
         return self.success(
-            f"Datetime fetched successfully.",
+            messages.get(result),
             data={"day": day, "time": str(time), "date": str(date)}
         )
     
