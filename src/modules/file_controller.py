@@ -186,12 +186,15 @@ class FileController(BaseModule):
             return self.failure(f"Error deleting folder: {e}")
         
 
-    @action(name="list_folder_contents", params={"folder_path", "include_files", "include_folders"})
-    def list_folder_contents(self, folder_path: str, include_files: bool = True, include_folders: bool = True):
+    @action(name="list_folder_contents", params={"folder_name", "folder_path", "include_files", "include_folders"})
+    def list_folder_contents(self, folder_name: str = None, folder_path: str = None, include_files: bool = True, include_folders: bool = True):
         try:
+            if folder_name:
+                folder_path = self.file_registry.get_path(folder_name)
+
             if not os.path.isdir(folder_path):
                 return self.failure("Folder path is invalid.")
-
+            
             files = []
             folders = []
 
