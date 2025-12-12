@@ -362,6 +362,23 @@ class AppController(BaseModule):
             return self.failure(f"Error listing instances: {e}", data={"instances": []})
 
 
+    @action(name="get_active_instance")
+    def get_active_instance(self):
+        hwnd = win32gui.GetForegroundWindow()
+        if not hwnd:
+            return self.failure("No focused window found.")
+
+        pid = win32process.GetWindowThreadProcessId(hwnd)[1]
+        proc = psutil.Process(pid)
+
+        result =  {
+            "pid": pid,
+            "title": win32gui.GetWindowText(hwnd),
+            "process": proc.name()
+        }
+        return self.success("Focused window data", data=result)
+
+
     @action(name="switch_instance", params={"app_name", "instance_number"})
     def switch_instance(self, app_name: str, instance_number: int):
         process = self.process_names.get(app_name, app_name).lower()
