@@ -3,7 +3,7 @@ import threading
 import time
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import win32gui, win32process, win32api
 import psutil
 from configs.config import SCREENTIME_DATA, SCREENTIME_TIMEOUT, SCREENTIME_POLL_INTERVAL
@@ -61,6 +61,43 @@ class ScreenTimeModule(BaseModule):
     def _today_key(self):
         return datetime.now().strftime("%Y-%m-%d")
     
+
+    def _week_keys(self):
+        today = datetime.now().date()
+        monday = today - timedelta(days=today.weekday())  
+
+        keys = []
+        for i in range(7):
+            d = monday + timedelta(days=i)
+            keys.append(d.strftime("%Y-%m-%d"))
+
+        return keys
+    
+
+    def _month_keys(self):
+        today = datetime.now().date()
+        year, month = today.year, today.month
+
+        keys = []
+        day = 1
+
+        while True:
+            try:
+                d = datetime(year, month, day).date()
+                keys.append(d.strftime("%Y-%m-%d"))
+                day += 1
+            except ValueError:
+                break
+
+        return keys
+
+
+    def _to_hms_str(self, s: int):
+        h = s // 3600
+        m = (s % 3600) // 60
+        sec = s % 60
+        return f"{h:02}:{m:02}:{sec:02}"
+
 
     def _add_seconds(self, app_name: str, seconds: float):
         key = self._today_key()
@@ -167,9 +204,47 @@ class ScreenTimeModule(BaseModule):
         logger.info("ScreenTime tracking stopped")
 
 
+    @action(name="get_daily_breakdown", params={"range"})
+    def get_daily_breakdown(self, range="day"):
 
-    @action(name="get_screenusage_today")
-    def get_usage_today(self):
+        if range == "day":
+            keys = self._today_key()
+        elif range == "week":
+            keys = self._week_keys()
+        elif range == "month":
+            keys = self._month_keys()
+        else:
+            return self.failure("Invalid range, must be week/month")
+
+        result = {}
+
+        with self._lock:
+            for key in keys:
+                day_data = self.usage.get(key, {})
+                per_day = []
+
+                # Convert to sorted list
+                sorted_items = sorted(
+                    day_data.items(),
+                    key=lambda x: x[1],
+                    reverse=True
+                )
+
+                # Format each app into HMS
+                for app, sec in sorted_items:
+                    per_day.append({
+                        "app": app,
+                        "usage": self._to_hms_str(sec)
+                    })
+
+                result[key] = per_day
+                range = f"{keys[0]} - {keys[-1]}"
+
+        return self.success("Daily breakdown generated", data={"range": range, "breakdown": result})
+
+
+    @action(name="get_raw_usage_today")
+    def get_raw_usage_today(self):
         """Return a dict of application -> seconds for today."""
         key = self._today_key()
         with self._lock:
