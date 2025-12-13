@@ -63,6 +63,16 @@ class AppController(BaseModule):
             return self.failure(f"Error opening {app_path}: {e}")
             
 
+    @action(name="open_focus_app", params={"app_name", "query", "folder_path", "folder_name"})
+    def open_focus_app(self, app_name: str = None, query: str = None, folder_path: str = None, folder_name: str = None):
+        res = self.focus_app(app_name=app_name, query=query)
+        print(">>>>>>>>>", res)
+        if res["success"]:
+            return self.success(f"{app_name} with {query} window focused")
+
+        return self.open_app(app_name)
+
+
     @action(name="close_app", params={"app_name"})
     def close_app(self, app_name: str):
         process_name = self.process_names.get(app_name, app_name).lower()
@@ -126,35 +136,36 @@ class AppController(BaseModule):
 
     # ------------- Window management --------------
 
-    @action(name="focus_app", params={"app_name", "title"})
-    def focus_app(self, app_name: str, title: str = None):
-        process_name = self.process_names.get(app_name, app_name).lower()
+    @action(name="focus_app", params={"app_name", "query", "instance"})
+    def focus_app(self, app_name: str, query: str = None, instance: dict = None):
+        if instance:
+            hwnd = instance["hwnd"]
+            resolved_title = instance["title"]
 
-        # Try direct match
-        windows = self._get_windows_by_process_and_title(process_name)
-
-        # Fallback to ApplicationFrameHost
-        if not windows:
-            windows = self._get_windows_by_process_and_title(
-                "applicationframehost", process_name
-            )
-
-        if not windows:
-            return self.failure(f"No visible window found for {process_name}")
-
-        # Resolve the target window handle
-        hwnd, resolved_title = None, None
-        if title:
-            for w in windows:
-                if title in w["title"]:
-                    hwnd = w["hwnd"]
-                    resolved_title = w["title"]
-                    break
-            if hwnd is None:
-                return self.failure(f"No window found with title containing '{title}'")
         else:
-            hwnd = windows[0]["hwnd"]
-            resolved_title = windows[0]["title"]
+            process_name = self.process_names.get(app_name, app_name).lower()
+            windows = self._get_windows_by_process_and_title(process_name)
+
+            # Fallback to ApplicationFrameHost
+            if not windows:
+                windows = self._get_windows_by_process_and_title(
+                    "applicationframehost", process_name
+                )
+
+            if not windows:
+                return self.failure(f"No visible window found for {process_name}")
+
+            # Resolve the target window handle
+            hwnd, resolved_title = None, None
+            if query:
+                for w in windows:
+                    if query in w["title"]:
+                        hwnd = w["hwnd"]
+                        resolved_title = w["title"]
+                        break
+                if hwnd is None:
+                    return self.failure(f"No window found with title containing '{query}'")
+
 
         try:
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
@@ -163,12 +174,14 @@ class AppController(BaseModule):
             fg_thread, _ = win32process.GetWindowThreadProcessId(fg)
             target_thread, _ = win32process.GetWindowThreadProcessId(hwnd)
 
-            win32process.AttachThreadInput(fg_thread, target_thread, True)
-            win32gui.SetForegroundWindow(hwnd)
-            win32process.AttachThreadInput(fg_thread, target_thread, False)
+            if fg_thread != target_thread:
+                win32process.AttachThreadInput(fg_thread, target_thread, True)
+                win32gui.SetForegroundWindow(hwnd)
+                win32process.AttachThreadInput(fg_thread, target_thread, False)
+            else:
+                win32gui.SetForegroundWindow(hwnd)
 
             return self.success(f"Focused {resolved_title}", data={"hwnd": hwnd})
-
         except Exception as e:
             return self.failure(f"Failed to focus window: {e}")
 
