@@ -33,7 +33,7 @@ class AppController(BaseModule):
 
         # Resolve folder path if provided by name
         if folder_name:
-            folder_path = self.file_registry.get(folder_name)
+            folder_path = self.file_registry.get_path(folder_name)
 
         # Cleanly build the command for launching Windows apps from WSL
         def launch_windows_app(exe, arg=None):
