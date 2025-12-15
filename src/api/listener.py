@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-import threading, requests, json
+import threading, requests, inspect, asyncio
 from configs.config import WIN_HOST, WIN_PORT
 from core.registry import MODULE_REGISTRY, FUNCTION_REGISTRY, file_registry
 from core.logger import logger
@@ -32,24 +32,28 @@ class WindowsListener:
                 return jsonify({"error": f"Function not found: {func_info['function']}"}), 500
 
             params = request.json or {}
+
             try:
-                res = action_func(**params)
-                result = {
+                if inspect.iscoroutinefunction(action_func):
+                    res = asyncio.run(action_func(**params))
+                else:
+                    res = action_func(**params)
+
+                logger.info(res)
+                return jsonify({
                     "status": "success",
                     "action": name,
                     "result": res
-                }
-                logger.info(res)
-                return jsonify(result)
+                })
+
             except Exception as e:
-                result = {"error": str(e)}
-                logger.info(result)
-                return jsonify(result), 500
+                logger.info({"error": str(e)})
+                return jsonify({"error": str(e)}), 500
 
 
         @self.app.route("/registry", methods=["GET"])
         def registry():
-            module_registry = {
+            modules_registry = {
                 name: {
                     "module": meta.get("module"),
                     "class": meta.get("class"),
@@ -61,7 +65,7 @@ class WindowsListener:
 
             file_registry_dict = file_registry.get_registered_files()
             return jsonify({
-                "modules": module_registry,
+                "modules_registry": modules_registry,
                 "file_registry": file_registry_dict
             }), 200
         
