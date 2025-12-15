@@ -1,9 +1,9 @@
-import subprocess
+import subprocess, pytz, psutil, pyperclip
 from core.registry import action
 from core.base_module import BaseModule
 from tray.tray_app import JarvisTray
 from datetime import datetime
-import pytz, psutil
+from pathlib import Path
 
 
 
@@ -157,6 +157,52 @@ class SystemController(BaseModule):
         return self.failure("Invalid mode")
 
     
+
+    @action(name="get_copied_value", params={"_as"})
+    def get_copied_value(self, _as=None):
+        copied = pyperclip.paste().strip()
+
+        if not copied:
+            return self.failure("Clipboard is empty")
+
+        if _as == "path":
+            path_obj = Path(copied)
+            if not path_obj.exists():
+                return self.failure(f"Path does not exist: {copied}")
+
+            if path_obj.is_file():
+                return self.success("Clipboard value as path", data={
+                    "folder": str(path_obj.parent.resolve()),
+                    "file": path_obj.name
+                })
+            else:
+                return self.success("Clipboard value as path", data={
+                    "folder": str(path_obj.resolve()),
+                    "file": None
+                })
+
+        return self.success("Clipboard value", data={"text": copied})
+
+
+    @action(name="resolve_path", params={"path"})
+    def resolve_path(self, path: str):
+
+        if not path:
+            raise ValueError("No path provided")
+
+        raw_path = path.strip()
+        path_obj = Path(raw_path)
+
+        if not path_obj.exists():
+            raise ValueError(f"Path does not exist: {raw_path}")
+
+        if path_obj.is_file():
+            return {"folder": str(path_obj.parent), "file": path_obj.name}
+
+        return {"folder": str(path_obj), "file": None}
+    
+
+
 
 if __name__ == "__main__":
     sc = SystemController()
