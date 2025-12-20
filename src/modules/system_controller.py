@@ -141,7 +141,6 @@ class SystemController(BaseModule):
             return self.success("Wi-Fi disconnected")
 
         return self.failure("Invalid mode")
-    
 
 
     @action(name="bluetooth", params={"mode"})
@@ -156,7 +155,6 @@ class SystemController(BaseModule):
 
         return self.failure("Invalid mode")
 
-    
 
     @action(name="get_copied_value", params={"_as"})
     def get_copied_value(self, _as=None):

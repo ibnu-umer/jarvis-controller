@@ -66,7 +66,6 @@ class AppController(BaseModule):
     @action(name="open_focus_app", params={"app_name", "query", "folder_path", "folder_name"})
     def open_focus_app(self, app_name: str = None, query: str = None, folder_path: str = None, folder_name: str = None):
         res = self.focus_app(app_name=app_name, query=query)
-        print(">>>>>>>>>", res)
         if res["success"]:
             return self.success(f"{app_name} with {query} window focused")
 
@@ -657,17 +656,17 @@ class AppController(BaseModule):
 
         def callback(hwnd, _):
             if not win32gui.IsWindowVisible(hwnd) or not win32gui.IsWindowEnabled(hwnd):
-                return
+                return None
 
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
             try:
                 proc = psutil.Process(pid)
             except psutil.NoSuchProcess:
-                return
+                return None
             
 
             if proc.name().lower().split(".")[0] != target_proc.lower():
-                return
+                return None
 
             title = win32gui.GetWindowText(hwnd)
             if title and (target_title is None or target_title.lower() in title.lower()):
