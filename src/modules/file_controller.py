@@ -1,10 +1,7 @@
-import os, zipfile
-import shutil
-import subprocess, fnmatch
+import os, zipfile, send2trash, shutil, subprocess, fnmatch, hashlib
+import win32com.client, pythoncom, win32con, win32gui, win32process, ctypes
 from pathlib import Path
 from typing import Optional, List
-import hashlib
-import send2trash  # for safe deletion
 from datetime import datetime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -132,6 +129,12 @@ class FileController(BaseModule):
                 return self.failure("Folder path not provided.")
 
             folder = Path(folder_path).expanduser().resolve()
+
+            # check for already open folder, if found focus
+            running_win = self.find_open_explorer(folder)
+            if running_win:
+                res = self.focus_window(running_win)
+                return self.success("Window focused", data={"hwnd": running_win})
 
             if not folder.exists() or not folder.is_dir():
                 return self.failure("Folder does not exist.")
@@ -465,4 +468,71 @@ class FileController(BaseModule):
                 results["failed"].append((p, str(e)))
 
         return self.success("Batch operation completed.", results)
+
+
+    # ------------------------- HELPERS ----------------------
+    
+    def find_open_explorer(self, path: str) -> str | None:
+        pythoncom.CoInitialize()   
+
+        try:
+            shell = win32com.client.Dispatch("Shell.Application")
+            target = os.path.normcase(os.path.abspath(path))
+
+            for win in shell.Windows():
+                try:
+                    folder = os.path.normcase(
+                        os.path.abspath(win.Document.Folder.Self.Path)
+                    )
+
+                    if self.match_relative_path(folder, target):
+                        return int(win.HWND)
+
+                except Exception:
+                    continue
+
+            return None
+
+        finally:
+            pythoncom.CoUninitialize()
+
+
+    def match_relative_path(self, folder: str, target: str):
+        def split_path(path):
+            path = os.path.normcase(os.path.abspath(path))
+            return path.strip(os.sep).split(os.sep)
+
+        fold_path = split_path(folder)
+        targ_path = split_path(target)
+
+        if fold_path == targ_path:
+            return True
+
+        if targ_path[-1] in fold_path[-2:] or fold_path[-1] in targ_path[-2:]:
+            return True
+        
+        return False
+        
+
+    def focus_window(self, hwnd: int):
+        if not hwnd:
+            return False
+
+        try:
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+
+            # Get thread IDs
+            fg_hwnd = win32gui.GetForegroundWindow()
+            fg_thread, _ = win32process.GetWindowThreadProcessId(fg_hwnd)
+            target_thread, _ = win32process.GetWindowThreadProcessId(hwnd)
+
+            # Temporarily attach threads (Windows focus stealing rules)
+            ctypes.windll.user32.AttachThreadInput(fg_thread, target_thread, True)
+            win32gui.SetForegroundWindow(hwnd)
+            ctypes.windll.user32.AttachThreadInput(fg_thread, target_thread, False)
+
+            return True
+        except Exception as e:
+            print(e)
+            return False
 
