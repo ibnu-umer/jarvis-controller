@@ -59,7 +59,7 @@ class SystemController(BaseModule):
         if mode not in ("set", "inc", "dec"):
             return self.failure("Invalid mode")
         
-        value = 10 if not value else value
+        value = 10 if value is None else value
 
         if mode == "inc":
             self._run(f"\"{self.NIRCMD}\" changebrightness {value}")
@@ -75,11 +75,11 @@ class SystemController(BaseModule):
     
 
     @action(name="volume", params={"value", "mode"})
-    def set_volume(self, value, mode="set"):
+    def set_volume(self, value = None, mode="set"):
         if mode not in ("set", "inc", "dec"):
             return self.failure("Invalid mode")
-
-        value = 10 if not value else value
+        
+        value = 10 if value is None else value
         
         if mode == "inc":
             self._run(f"\"{self.NIRCMD}\" changesysvolume {int(65535 * (value / 100))}")
