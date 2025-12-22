@@ -1,13 +1,18 @@
 import sys, time, webbrowser, requests
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QAction
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QObject, pyqtSignal
 
 from configs.config import WIN_BASE_URL, WSL_BASE_URL
 from core.logger import logger
 from tray.popup import Popup 
+import keyboard, threading
 
 
+
+
+class HotkeyBridge(QObject):
+    toggle_requested = pyqtSignal()
 
 
 class JarvisTray:
@@ -41,6 +46,15 @@ class JarvisTray:
         self.timer.start(self.PING_INTERVAL)
 
         self.tray_icon.show()
+
+        self.hotkey_bridge = HotkeyBridge()
+        self.hotkey_bridge.toggle_requested.connect(self.popup.toggle)
+
+        threading.Thread(
+            target=self.register_shortcut,
+            daemon=True
+        ).start()
+
         logger.info("Jarvis Tray (PyQt6) started")
 
 
@@ -62,6 +76,15 @@ class JarvisTray:
         painter.end()
 
         return QIcon(pixmap)
+    
+
+    def register_shortcut(self):
+        """Global shortcut to toggle popup window."""
+        keyboard.add_hotkey(
+            'win+shift+j',
+            lambda: self.hotkey_bridge.toggle_requested.emit()
+        )
+        keyboard.wait()
     
 
     # --------- Backend ---------

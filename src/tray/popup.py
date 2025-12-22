@@ -107,6 +107,14 @@ class Popup(QWidget):
         if event.key() == Qt.Key.Key_Escape:
             self.hide()
 
+
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else:
+            self.show()
+
+
     # ---------- NETWORK ----------
 
     def _send_command(self):
@@ -149,7 +157,7 @@ class Popup(QWidget):
         bar = QProgressBar()
 
         if task.get("progress") is None:
-            bar.setRange(0, 0)  # indeterminate
+            bar.setRange(0, 0)  
         else:
             bar.setRange(0, 100)
             bar.setValue(int(task["progress"] * 100))
@@ -158,11 +166,3 @@ class Popup(QWidget):
         layout.addWidget(bar)
         return container
 
-
-# ---------- STANDALONE RUN ----------
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    popup = Popup()
-    popup.show()
-    sys.exit(app.exec())
