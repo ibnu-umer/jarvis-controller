@@ -59,19 +59,19 @@ class StatusStreamThread(threading.Thread):
 class Popup(QWidget):
     def __init__(self, app):
         super().__init__()
+
         self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.WindowStaysOnTopHint
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.Tool
         )
-        self.setFixedSize(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        screen_geom = app.primaryScreen().geometry()
-        x = screen_geom.width() - self.width() - 20  
-        y = screen_geom.height() - self.height() - 40 
-        self.move(x, y)
-
         self._build_ui()
+        self._set_style()
+
+        self.adjustSize()
+        self._move_to_corner(app)
         ui_state.updated.connect(self._on_state_update)
 
         # StatusStreamThread().start()
@@ -79,7 +79,16 @@ class Popup(QWidget):
     # ---------- UI ----------
 
     def _build_ui(self):
-        layout = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        self.container = QWidget(self)
+        self.container.setObjectName("main")
+        outer.addWidget(self.container)
+
+        layout = QVBoxLayout(self.container)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
 
         self.input = QLineEdit()
         self.input.setPlaceholderText("Type a command…")
@@ -90,16 +99,50 @@ class Popup(QWidget):
 
         self.task_list = QListWidget()
 
-        send_btn = QPushButton("Send")
+        send_btn = QPushButton(">")
+        send_btn.setFixedWidth(30)
         send_btn.clicked.connect(self._send_command)
+
+        close_btn = QPushButton("X")
+        close_btn.setFixedWidth(30)
+        close_btn.clicked.connect(self.toggle)
 
         input_row = QHBoxLayout()
         input_row.addWidget(self.input)
         input_row.addWidget(send_btn)
+        input_row.addWidget(close_btn)
 
         layout.addLayout(input_row)
         layout.addWidget(self.response)
         layout.addWidget(self.task_list)
+
+
+
+    def _set_style(self):
+        self.setStyleSheet("""
+            QWidget#main {
+                background-color: #0f172a;
+                border: 2px solid #53658f;
+                border-radius: 10px;
+                color: #e5e7eb;
+            }
+            QLineEdit {
+                background-color: #020617;
+                border: 1px solid #53658f;
+                border-radius: 6px;
+                padding: 6px;
+                color: #e5e7eb;
+            }
+        """)
+
+
+    def _move_to_corner(self, app):
+        screen = app.primaryScreen().availableGeometry()
+        self.move(
+            screen.right() - self.width() - 20,
+            screen.bottom() - self.height() - 40
+        )
+
 
     # ---------- EVENTS ----------
 
