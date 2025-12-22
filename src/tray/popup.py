@@ -21,8 +21,8 @@ from configs.config import WSL_BASE_URL
 STATUS_STREAM_ENDPOINT = "/status/stream"
 COMMAND_ENDPOINT = "/command"
 
-WINDOW_WIDTH = 480
-WINDOW_HEIGHT = 360
+WINDOW_WIDTH = 320
+WINDOW_HEIGHT = 260
 
 # =========================================
 
@@ -105,7 +105,7 @@ class Popup(QWidget):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
-            self.close()
+            self.hide()
 
     # ---------- NETWORK ----------
 
