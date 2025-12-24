@@ -209,3 +209,8 @@ class Popup(QWidget):
         layout.addWidget(bar)
         return container
 
+
+    def log_progress(self, action, status):
+        text = f"{action} → {status}"
+        self.task_list.addItem(text)
+        self.task_list.scrollToBottom()

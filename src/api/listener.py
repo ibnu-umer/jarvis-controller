@@ -13,6 +13,7 @@ class WindowsListener:
         self.port = port
         self.app = Flask("WindowsListener")
         self.server_thread = None
+        self.tray = None
         self._setup_routes()
 
 
@@ -70,6 +71,20 @@ class WindowsListener:
             }), 200
         
 
+        @self.app.route("/progress", methods=["POST"])
+        def log_progress():
+            data = request.get_json(force=True)
+            action = data.get("action")
+            status = data.get("status")
+
+            if not action or not status:
+                return jsonify({"error": "Missing action or status"}), 400
+            
+            self.tray.popup.log_progress(action, status)
+            logger.info(f"action: {action}, status: {status}")
+            return jsonify({"ok": True}), 200
+        
+
         @self.app.route("/shutdown", methods=["GET"])
         def shutdown():
             func = request.environ.get('werkzeug.server.shutdown')
@@ -100,3 +115,7 @@ class WindowsListener:
         if self.server_thread:
             self.server_thread.join(timeout=2)
             self.server_thread = None
+
+
+
+    

@@ -19,13 +19,16 @@ except Exception as e:
 
 
 
-def run_tray():
+def run_tray(windows_listener):
     tray = JarvisTray()
     loop = QEventLoop(tray.app)
     asyncio.set_event_loop(loop)
 
+    windows_listener.tray = tray
+
     with loop:
         loop.run_forever()
+
 
 
 
@@ -38,7 +41,7 @@ if __name__ == "__main__":
         listener_thread = threading.Thread(target=windows_listener.start, daemon=True)
         listener_thread.start()
 
+        run_tray(windows_listener)
 
-        run_tray()
     except Exception as e:
         print(e)
