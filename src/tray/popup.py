@@ -1,4 +1,4 @@
-import sys, time, threading, requests
+import sys, time, threading, requests, asyncio
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -57,8 +57,9 @@ class StatusStreamThread(threading.Thread):
 
 
 class Popup(QWidget):
-    def __init__(self, app):
+    def __init__(self, app, parent):
         super().__init__()
+        self._parent = parent
 
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
@@ -166,13 +167,12 @@ class Popup(QWidget):
             return
 
         self.input.clear()
+        asyncio.create_task(self._send_command_async(text))
 
+
+    async def _send_command_async(self, text):
         try:
-            requests.post(
-                WSL_BASE_URL + COMMAND_ENDPOINT,
-                json={"text": text},
-                timeout=2,
-            )
+            await self._parent.backend_command_trigger(text)
         except Exception as e:
             print(e)
             self.response.setText("Backend not reachable")

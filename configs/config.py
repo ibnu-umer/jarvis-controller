@@ -6,7 +6,7 @@ import os, sys
 WIN_HOST = "0.0.0.0"
 WIN_PORT = 6001
 
-WSL_HOST = "172.29.128.1"     # dynamically read or configured
+WSL_HOST = "172.29.130.227"     # dynamically read or configured
 WSL_PORT = 6000
 
 PING_INTERVAL = 6  # seconds

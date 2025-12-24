@@ -6,7 +6,7 @@ from PyQt6.QtCore import Qt, QTimer, QObject, pyqtSignal
 from configs.config import WIN_BASE_URL, WSL_BASE_URL
 from core.logger import logger
 from tray.popup import Popup 
-import keyboard, threading
+import keyboard, threading, httpx, asyncio
 
 
 
@@ -28,7 +28,7 @@ class JarvisTray:
         self.last_checked = None
 
         self.app = QApplication(sys.argv)
-        self.popup = Popup(self.app)
+        self.popup = Popup(self.app, self)
         self.popup.hide()
 
         # Tray icon
@@ -56,6 +56,7 @@ class JarvisTray:
         ).start()
 
         logger.info("Jarvis Tray (PyQt6) started")
+        
 
 
     # --------- Icon ---------
@@ -102,6 +103,16 @@ class JarvisTray:
         self.last_checked = time.strftime("%Y-%m-%d %H:%M:%S")
         self.tray_icon.setIcon(self.make_icon())
         self._build_menu()
+
+
+    async def backend_command_trigger(self, text):
+        async with httpx.AsyncClient(timeout=5) as client:
+            r = await client.post(
+                f"{self.backend_base}/command",
+                json={"user_input": text}
+            )
+            r.raise_for_status()
+            return r.json()
 
 
     # --------- Menu ---------

@@ -1,6 +1,6 @@
-import sys
-import os
-import threading
+import threading, sys, os, asyncio
+from qasync import QEventLoop
+
 
 # Add src folder to sys.path
 SRC_PATH = os.path.join(os.path.dirname(__file__), "src")
@@ -21,7 +21,11 @@ except Exception as e:
 
 def run_tray():
     tray = JarvisTray()
-    tray.run()
+    loop = QEventLoop(tray.app)
+    asyncio.set_event_loop(loop)
+
+    with loop:
+        loop.run_forever()
 
 
 
