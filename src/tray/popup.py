@@ -1,4 +1,4 @@
-import sys, time, threading, requests, asyncio
+import sys, time, threading, requests, asyncio, json
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -13,6 +13,8 @@ from PyQt6.QtWidgets import (
     QProgressBar,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QObject
+from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtCore import Qt
 from configs.config import WSL_BASE_URL
 
 
@@ -53,7 +55,15 @@ class StatusStreamThread(threading.Thread):
                         if line:
                             self.handle_event(line)
             except requests.RequestException:
-                time.sleep(2)
+                time.sleep(2) 
+
+    def handle_event(self, raw_line: bytes):
+        try:
+            payload = json.loads(raw_line.decode())
+            ui_state.update(payload)
+        except Exception:
+            pass
+
 
 
 class Popup(QWidget):
@@ -118,6 +128,70 @@ class Popup(QWidget):
         layout.addWidget(self.task_list)
 
 
+    def create_task_item(self, item: QListWidgetItem, user_input: str, actions: list[str], success: bool):
+        container = QWidget()
+        main_layout = QVBoxLayout(container)
+        main_layout.setContentsMargins(8, 6, 8, 6)
+        main_layout.setSpacing(4)
+
+        # ---------- HEADER ----------
+
+        header = QWidget()
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+
+        user_label = QLabel(user_input)
+        user_label.setWordWrap(True)
+        user_label.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        user_font = QFont()
+        user_font.setPointSize(8)
+        user_font.setBold(True)
+        user_label.setFont(user_font)
+
+        status_dot = QLabel("●")
+        status_dot.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        status_dot.setStyleSheet(
+            f"color: {'#22c55e' if success else '#ef4444'};"
+        )
+
+        header_layout.addWidget(user_label, 1)
+        header_layout.addWidget(status_dot)
+
+        # ---------- ACTIONS ----------
+
+        actions_container = QWidget()
+        actions_layout = QVBoxLayout(actions_container)
+        actions_layout.setContentsMargins(12, 2, 0, 0)
+        actions_layout.setSpacing(2)
+
+        action_font = QFont()
+        action_font.setPointSize(7)
+
+        for action in actions:
+            label = QLabel(f"✅ {action}")
+            label.setFont(action_font)
+            label.setStyleSheet("color: #16a34a;")
+            actions_layout.addWidget(label)
+
+        actions_container.setVisible(True)
+
+        # ---------- TOGGLE ----------
+
+        def toggle_actions():
+            actions_container.setVisible(not actions_container.isVisible())
+            container.adjustSize()
+            item.setSizeHint(container.sizeHint())
+
+        user_label.mousePressEvent = lambda _: toggle_actions()
+
+        # ---------- ASSEMBLE ----------
+
+        main_layout.addWidget(header)
+        main_layout.addWidget(actions_container)
+
+        return container
+
 
     def _set_style(self):
         self.setStyleSheet("""
@@ -170,9 +244,11 @@ class Popup(QWidget):
         asyncio.create_task(self._send_command_async(text))
 
 
+
     async def _send_command_async(self, text):
         try:
-            await self._parent.backend_command_trigger(text)
+            resp = await self._parent.backend_command_trigger(text)
+            print(resp["command_id"])
         except Exception as e:
             print(e)
             self.response.setText("Backend not reachable")
@@ -180,16 +256,31 @@ class Popup(QWidget):
     # ---------- STATE UPDATE ----------
 
     def _on_state_update(self, state: dict):
-        self.response.setText(state.get("response", {}).get("text", ""))
+        user_input = state.get("user_input", "")
+        actions = state.get("actions", [])
+        success = state.get("success", True)
 
+        response_text = (
+            state.get("response", {}).get("text", "")
+            if isinstance(state.get("response"), dict)
+            else ""
+        )
+
+        self.response.setText(response_text)
         self.task_list.clear()
 
-        for task in state.get("tasks", []):
-            item = QListWidgetItem()
-            widget = self._task_widget(task)
-            item.setSizeHint(widget.sizeHint())
-            self.task_list.addItem(item)
-            self.task_list.setItemWidget(item, widget)
+        item = QListWidgetItem(self.task_list)
+        widget = self.create_task_item(
+            item=item,
+            user_input=user_input,
+            actions=actions,
+            success=success
+        )
+
+        item.setSizeHint(widget.sizeHint())
+        self.task_list.setItemWidget(item, widget)
+
+
 
     def _task_widget(self, task: dict):
         container = QWidget()
@@ -210,7 +301,10 @@ class Popup(QWidget):
         return container
 
 
-    def log_progress(self, action, status):
-        text = f"{action} → {status}"
-        self.task_list.addItem(text)
-        self.task_list.scrollToBottom()
+    def log_progress(self, user_input, parsed_intent, actions, status):
+        ui_state.update({
+            "user_input": user_input,
+            "parsed_intent": parsed_intent,
+            "actions": actions,
+            "status": status
+        })
