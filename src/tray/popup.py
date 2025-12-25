@@ -42,8 +42,13 @@ ui_state = UIState()
 class StatusStreamThread(threading.Thread):
     daemon = True
 
+    def __init__(self, command_id: str):
+        super().__init__()
+        self.command_id = command_id
+        self._stop_event = threading.Event()
+
     def run(self):
-        url = f"{WSL_BASE_URL}/status/stream"
+        url = f"{WSL_BASE_URL}/status/stream/{self.command_id}"
         self._stop_event = threading.Event()
 
         while not self._stop_event.is_set():
@@ -85,7 +90,6 @@ class Popup(QWidget):
         self._move_to_corner(app)
         ui_state.updated.connect(self._on_state_update)
 
-        # StatusStreamThread().start()
 
     # ---------- UI ----------
 
@@ -244,11 +248,11 @@ class Popup(QWidget):
         asyncio.create_task(self._send_command_async(text))
 
 
-
     async def _send_command_async(self, text):
         try:
             resp = await self._parent.backend_command_trigger(text)
-            print(resp["command_id"])
+            self.stream_thread = StatusStreamThread(resp["command_id"])
+            self.stream_thread.start()
         except Exception as e:
             print(e)
             self.response.setText("Backend not reachable")
@@ -259,15 +263,6 @@ class Popup(QWidget):
         user_input = state.get("user_input", "")
         actions = state.get("actions", [])
         success = state.get("success", True)
-
-        response_text = (
-            state.get("response", {}).get("text", "")
-            if isinstance(state.get("response"), dict)
-            else ""
-        )
-
-        self.response.setText(response_text)
-        self.task_list.clear()
 
         item = QListWidgetItem(self.task_list)
         widget = self.create_task_item(
