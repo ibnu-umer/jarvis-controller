@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timedelta
 import win32gui, win32process, win32api
 import psutil
-from configs.config import SCREENTIME_DATA, SCREENTIME_TIMEOUT, SCREENTIME_POLL_INTERVAL
+from configs.config import SCREENTIME_DATA, SCREENTIME_TIMEOUT, SCREENTIME_POLL_INTERVAL, SCREENTIME_SAVE_INTERVAL 
 from core.base_module import BaseModule
 from core.logger import logger
 
@@ -27,6 +27,8 @@ class ScreenTimeModule(BaseModule):
         self._watcher_stop = threading.Event()
         self._current_app = None  
         self._current_start = None  
+        self._last_save = time.time()
+        self._pid_cache = {}
 
         self.usage = {}
         os.makedirs(os.path.dirname(self.storage_path) or ".", exist_ok=True)
@@ -55,7 +57,6 @@ class ScreenTimeModule(BaseModule):
             os.replace(tmp, self.storage_path)
         except Exception as e:
             logger.error(f"Error while saving screentime data: {e}")
-
 
     # ----------------------- HELPERS -----------------------
     def _today_key(self):
@@ -100,11 +101,12 @@ class ScreenTimeModule(BaseModule):
 
 
     def _add_seconds(self, app_name: str, seconds: float):
+
         key = self._today_key()
         with self._lock:
             day = self.usage.setdefault(key, {})
             day[app_name] = int(day.get(app_name, 0) + round(seconds))
-            self._save()
+            # self._save()
 
 
     def _get_foreground_process_name(self):
@@ -112,9 +114,19 @@ class ScreenTimeModule(BaseModule):
             hwnd = win32gui.GetForegroundWindow()
             if not hwnd:
                 return None
+
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
-            proc = psutil.Process(pid)
-            return proc.name()
+            if not pid:
+                return None
+
+            if pid not in self._pid_cache:
+                try:
+                    self._pid_cache[pid] = psutil.Process(pid).name()
+                except Exception:
+                    self._pid_cache[pid] = None
+
+            return self._pid_cache[pid]
+
         except Exception:
             return None
         
@@ -154,12 +166,18 @@ class ScreenTimeModule(BaseModule):
 
                 is_tracking = True
 
+                now = time.time()
+                if now - self._last_save >= SCREENTIME_SAVE_INTERVAL:
+                    with self._lock:
+                        self._save()
+                    self._last_save = now
+
             except Exception as e:
                 if is_tracking:
                     logger.error(f"Error while tracking screentime: {e}")
                     is_tracking = False
 
-        time.sleep(self.poll_interval)
+            time.sleep(self.poll_interval)
 
 
     def _start_watcher_thread(self):
@@ -194,6 +212,25 @@ class ScreenTimeModule(BaseModule):
             return self.failure("Foreground tracking unavailable on this platform or missing dependencies")
         self._start_watcher_thread()
         logger.info("ScreenTime tracking started")
+
+
+    def shutdown(self):
+        logger.info("Shutting down ScreenTime module")
+        self._watcher_stop.set()
+
+        if self._watcher_thread and self._watcher_thread.is_alive():
+            self._watcher_thread.join(timeout=3)
+
+        now = time.time()
+        with self._lock:
+            if self._current_app and self._current_start:
+                elapsed = now - self._current_start
+                self._add_seconds(self._current_app, elapsed)
+                self._current_app = None
+                self._current_start = None
+
+            self._save()
+        logger.info("ScreenTime module shutdown complete")
     
 
     # ----------------------- MODULE ACTIONS -----------------------
