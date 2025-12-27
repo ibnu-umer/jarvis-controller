@@ -91,7 +91,7 @@ class WindowsListener:
             if func:
                 func()
                 return "Server shutting down..."
-            return "Unable to shutdown", 500
+            return "Unable to shutdown, 500"
         
 
     def _run(self):
@@ -102,19 +102,19 @@ class WindowsListener:
         if not self.server_thread:
             self.server_thread = threading.Thread(target=self._run, daemon=True)
             self.server_thread.start()
-            print(f"Windows listener running at http://{self.host}:{self.port} in background thread...")
             logger.info(f"Windows listener running at http://{self.host}:{self.port} in background thread...")
 
 
     def stop(self):
+        shutdown_host = "127.0.0.1" if self.host == "0.0.0.0" else self.host
+
         try:
-            requests.get(f"http://{self.host}:{self.port}/shutdown")
-        except Exception:
-            pass
-        print("Stop requested for Windows listener thread (Flask will exit).")
-        if self.server_thread:
-            self.server_thread.join(timeout=2)
-            self.server_thread = None
+            requests.get(f"http://{shutdown_host}:{self.port}/shutdown", timeout=2)
+        except Exception as e:
+            logger.error(f"Failed to request listener shutdown: {e}")
+
+        logger.info("Windows listener stopped successfully")
+        self.server_thread = None
 
 
 

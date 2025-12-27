@@ -9,8 +9,9 @@ if SRC_PATH not in sys.path:
 
 try:
     from tray.tray_app import JarvisTray
-    from api.listener import WindowsListener 
-    from core.registry import load_registry
+    from api.listener import WindowsListener
+    from core.registry import load_registry, MODULE_REGISTRY
+    from core.logger import logger
 except Exception as e:
     print(e)
 
@@ -19,8 +20,8 @@ except Exception as e:
 
 
 
-def run_tray(windows_listener):
-    tray = JarvisTray()
+def run_tray(windows_listener, shutdown_func):
+    tray = JarvisTray(shutdown_func=shutdown_func)
     loop = QEventLoop(tray.app)
     asyncio.set_event_loop(loop)
 
@@ -33,15 +34,24 @@ def run_tray(windows_listener):
 
 
 
+
+
+
+
 if __name__ == "__main__":
     try:
         load_registry()
+        screen_time_obj = MODULE_REGISTRY._instances.get("ScreenTimeModule")
 
         windows_listener = WindowsListener()
         listener_thread = threading.Thread(target=windows_listener.start, daemon=True)
         listener_thread.start()
 
-        run_tray(windows_listener)
+        def shutdown():
+            windows_listener.stop()
+            screen_time_obj.shutdown()
+
+        run_tray(windows_listener, shutdown)
 
     except Exception as e:
         print(e)

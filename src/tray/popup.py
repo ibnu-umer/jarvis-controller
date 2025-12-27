@@ -17,6 +17,8 @@ from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtCore import Qt
 from configs.config import WSL_BASE_URL
 
+from src.core.logger import logger
+
 
 # ================= CONFIG =================
 
@@ -254,7 +256,7 @@ class Popup(QWidget):
             self.stream_thread = StatusStreamThread(resp["command_id"])
             self.stream_thread.start()
         except Exception as e:
-            print(e)
+            logger.warning(f"Backend not reachable: {e}")
             self.response.setText("Backend not reachable")
 
     # ---------- STATE UPDATE ----------

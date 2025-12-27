@@ -20,9 +20,10 @@ class JarvisTray:
     ICON_SIZE = 64
     TEXT_ICON_CHAR = "J"
 
-    def __init__(self, backend_base=WSL_BASE_URL, ui_url=WIN_BASE_URL):
+    def __init__(self, backend_base=WSL_BASE_URL, ui_url=WIN_BASE_URL, shutdown_func=None):
         self.backend_base = backend_base.rstrip("/")
         self.ui_url = ui_url
+        self.shutdown_func = shutdown_func
 
         self.healthy = False
         self.last_checked = None
@@ -55,7 +56,7 @@ class JarvisTray:
             daemon=True
         ).start()
 
-        logger.info("Jarvis Tray (PyQt6) started")
+        logger.info("Jarvis Tray started")
         
 
 
@@ -191,9 +192,12 @@ class JarvisTray:
 
     def quit_app(self):
         if self.confirm_with_popup("Are you sure you want to quit Jarvis?"):
+            self.shutdown_func()
             self.popup.close()
             self.tray_icon.hide()
             self.app.quit()
+
+            logger.info("Jarvis Tray stopped")
 
 
     def run(self):

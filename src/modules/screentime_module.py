@@ -215,7 +215,6 @@ class ScreenTimeModule(BaseModule):
 
 
     def shutdown(self):
-        logger.info("Shutting down ScreenTime module")
         self._watcher_stop.set()
 
         if self._watcher_thread and self._watcher_thread.is_alive():
