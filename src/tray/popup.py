@@ -17,7 +17,7 @@ from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtCore import Qt
 from configs.config import WSL_BASE_URL
 
-from src.core.logger import logger
+from core.logger import logger
 
 
 # ================= CONFIG =================

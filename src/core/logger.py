@@ -2,7 +2,7 @@ import logging
 import sys, os
 import queue
 from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
-from configs.config import LOG_FILE
+from configs.config import LOG_FILE, LOG_LEVEL
 
 
 
@@ -20,7 +20,7 @@ class Logger:
     def _init_logger(self, log_file, max_bytes, backup_count, console):
         self.log_queue = queue.Queue(-1)
         self.logger = logging.getLogger("AsyncLogger")
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(LOG_LEVEL)
         self.logger.propagate = False
 
         # Handlers

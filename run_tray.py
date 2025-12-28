@@ -54,4 +54,4 @@ if __name__ == "__main__":
         run_tray(windows_listener, shutdown)
 
     except Exception as e:
-        print(e)
+        logger.error(f"Error while running script: {e}")

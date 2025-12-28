@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, logging
 
 
 
@@ -31,3 +31,5 @@ SCREENTIME_DATA = "data/screentime.json"
 SCREENTIME_TIMEOUT = 60
 SCREENTIME_POLL_INTERVAL = 1.0
 SCREENTIME_SAVE_INTERVAL = 60
+
+LOG_LEVEL = logging.INFO
