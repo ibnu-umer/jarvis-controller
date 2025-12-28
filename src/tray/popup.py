@@ -134,7 +134,7 @@ class Popup(QWidget):
         layout.addWidget(self.task_list)
 
 
-    def create_task_item(self, item: QListWidgetItem, user_input: str, actions: list[str], success: bool):
+    def create_task_item(self, item: QListWidgetItem, user_input: str, actions: list[str], success: bool, message: str=""):
         container = QWidget()
         main_layout = QVBoxLayout(container)
         main_layout.setContentsMargins(8, 6, 8, 6)
@@ -179,6 +179,9 @@ class Popup(QWidget):
             label.setFont(action_font)
             label.setStyleSheet("color: #16a34a;")
             actions_layout.addWidget(label)
+
+        message_label = QLabel(message)
+        actions_layout.addWidget(message_label)
 
         actions_container.setVisible(True)
 
@@ -265,13 +268,15 @@ class Popup(QWidget):
         user_input = state.get("user_input", "")
         actions = state.get("actions", [])
         success = state.get("success", True)
+        message = state.get("message", "")
 
         item = QListWidgetItem(self.task_list)
         widget = self.create_task_item(
             item=item,
             user_input=user_input,
             actions=actions,
-            success=success
+            success=success,
+            messsage=message
         )
 
         item.setSizeHint(widget.sizeHint())
