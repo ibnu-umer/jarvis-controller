@@ -115,7 +115,7 @@ class SystemController(BaseModule):
         )
     
 
-    @action(name="battery")
+    @action(name="get_battery_status")
     def get_battery_status(self):
         battery = psutil.sensors_battery()
         return self.success(
