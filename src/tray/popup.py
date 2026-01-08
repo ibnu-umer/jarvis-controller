@@ -302,6 +302,7 @@ class Popup(QWidget):
 
         item.setSizeHint(widget.sizeHint())
         self.task_list.setItemWidget(item, widget)
+        self.task_list.scrollToBottom()
 
 
 
