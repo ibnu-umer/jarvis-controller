@@ -331,7 +331,7 @@ class AppController(BaseModule):
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
 
-            return self.failure(f"{process} is not running", data={"running": False})
+            return self.success(f"{process} is not running", data={"running": False})
 
         except Exception as e:
             return self.failure(f"Error while checking process: {e}", data={"running": False})
