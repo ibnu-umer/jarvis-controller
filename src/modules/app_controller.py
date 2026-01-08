@@ -57,7 +57,7 @@ class AppController(BaseModule):
 
             # Normal Windows app
             launch_windows_app(app_path, folder_path)
-            return self.success(f"App opened successfully: {app_path}")
+            return self.success(f"{app_name if app_name else "App"} opened successfully")
 
         except Exception as e:
             return self.failure(f"Error opening {app_path}: {e}")
@@ -87,7 +87,7 @@ class AppController(BaseModule):
         
         hwnd = windows[0]["hwnd"]
         win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-        return self.success(f"Closed one instance of {app_name}", data={"hwnd": hwnd, "closed": True})
+        return self.success(f"{app_name} closed", data={"hwnd": hwnd, "closed": True})
     
 
     @action(name="close_all_instances", params={"app_name", "force"})
@@ -182,7 +182,7 @@ class AppController(BaseModule):
 
             return self.success(f"Focused {resolved_title}", data={"hwnd": hwnd})
         except Exception as e:
-            return self.failure(f"Failed to focus window: {e}")
+            return self.failure(f"Failed to focus window")
 
 
     @action(name="minimize_app", params={"app_name"})

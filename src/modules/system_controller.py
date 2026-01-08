@@ -94,16 +94,15 @@ class SystemController(BaseModule):
         return self.success(f"Volume set to {value}%")
     
 
-    @action(name="datetime", params={"result"})
+    @action(name="get_datetime", params={"result"})
     def get_datetime(self, result):
         tz = pytz.timezone("Asia/Kolkata")
         now = datetime.now(tz)
-        date, day, time = now.date(), now.strftime("%A"), now.strftime("%H:%M:%S")
+        date, time = now.strftime("%A, %d %B %Y"), now.strftime("%I:%M %p")
 
         messages = {
             "time": f"The time is {time}",
             "date": f"Today is {date}",
-            "day": f"Today is {day}"
         }
         
         if result not in messages:
@@ -111,16 +110,20 @@ class SystemController(BaseModule):
         
         return self.success(
             messages.get(result),
-            data={"day": day, "time": str(time), "date": str(date)}
+            data={"time": str(time), "date": str(date)}
         )
     
 
-    @action(name="get_battery_status")
-    def get_battery_status(self):
+    @action(name="get_battery_status", params={"result"})
+    def get_battery_status(self, result):
         battery = psutil.sensors_battery()
+        messages = {
+            "level": f"its {battery.percent}%",
+            "plugged": "yes it is plugged" if battery.power_plugged else "Not plugged"
+        }
         return self.success(
-            f"Battery status fetched successfully",
-            data={"percent": battery.percent, "is_plugged": battery.power_plugged}
+            messages.get(result),
+            data={"percent": battery.percent, "plugged": battery.power_plugged}
         )
     
 

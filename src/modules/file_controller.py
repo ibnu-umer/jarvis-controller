@@ -149,7 +149,7 @@ class FileController(BaseModule):
             else:
                 os.startfile(str(folder))  # probably in the background
 
-            return self.success("Folder opened.", data={"path": str(folder)})
+            return self.success(f"{folder_name if folder_name else ""} Folder opened.", data={"path": str(folder)})
 
         except Exception as e:
             return self.failure("Failed to open folder.", data={"error": str(e)})
