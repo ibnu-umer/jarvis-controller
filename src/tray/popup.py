@@ -49,24 +49,40 @@ class StatusStreamThread(threading.Thread):
         self.command_id = command_id
         self._stop_event = threading.Event()
 
+
+    def stop(self):
+        self._stop_event.set()
+
+
     def run(self):
         url = f"{WSL_BASE_URL}/status/stream/{self.command_id}"
-        self._stop_event = threading.Event()
 
         while not self._stop_event.is_set():
             try:
-                with requests.get(url, stream=True, timeout=5) as r:
+                with requests.get(url, stream=True, timeout=(5, None)) as r:
+                    r.raise_for_status()
+
                     for line in r.iter_lines():
                         if self._stop_event.is_set():
                             return
-                        if line:
-                            self.handle_event(line)
+
+                        if not line:
+                            continue
+
+                        self.handle_event(line)
+
+                return
+
             except requests.RequestException:
-                time.sleep(2) 
+                if self._stop_event.is_set():
+                    return
+                time.sleep(5)  
+
 
     def handle_event(self, raw_line: bytes):
         try:
             payload = json.loads(raw_line.decode())
+            print(payload)
             ui_state.update(payload)
         except Exception:
             pass
@@ -151,7 +167,7 @@ class Popup(QWidget):
         user_label.setCursor(Qt.CursorShape.PointingHandCursor)
 
         user_font = QFont()
-        user_font.setPointSize(8)
+        user_font.setPointSize(7)
         user_font.setBold(True)
         user_label.setFont(user_font)
 
@@ -172,18 +188,23 @@ class Popup(QWidget):
         actions_layout.setSpacing(2)
 
         action_font = QFont()
-        action_font.setPointSize(7)
+        action_font.setPointSize(6)
 
         for action in actions:
-            label = QLabel(f"✅ {action}")
+            label = QLabel(f"- {action}")
             label.setFont(action_font)
-            label.setStyleSheet("color: #16a34a;")
+            label.setStyleSheet("color: #9ca19e;")
             actions_layout.addWidget(label)
 
         message_label = QLabel(message)
+        color = "#96e0a7" if success else "#e09698"
+        message_label.setStyleSheet(f"color: {color};")
+        message_font = QFont()
+        message_font.setPointSize(6)
+        message_label.setFont(message_font)
         actions_layout.addWidget(message_label)
 
-        actions_container.setVisible(True)
+        actions_container.setVisible(False)
 
         # ---------- TOGGLE ----------
 
@@ -266,8 +287,8 @@ class Popup(QWidget):
 
     def _on_state_update(self, state: dict):
         user_input = state.get("user_input", "")
-        actions = state.get("actions", [])
-        success = state.get("success", True)
+        actions = state.get("executed_actions", [])
+        success = True if "done" in actions else False
         message = state.get("message", "")
 
         item = QListWidgetItem(self.task_list)
@@ -276,7 +297,7 @@ class Popup(QWidget):
             user_input=user_input,
             actions=actions,
             success=success,
-            messsage=message
+            message=message
         )
 
         item.setSizeHint(widget.sizeHint())
@@ -303,10 +324,10 @@ class Popup(QWidget):
         return container
 
 
-    def log_progress(self, user_input, parsed_intent, actions, status):
-        ui_state.update({
-            "user_input": user_input,
-            "parsed_intent": parsed_intent,
-            "actions": actions,
-            "status": status
-        })
+    # def log_progress(self, user_input, parsed_intent, actions, status):
+    #     ui_state.update({
+    #         "user_input": user_input,
+    #         "parsed_intent": parsed_intent,
+    #         "actions": actions,
+    #         "status": status
+    #     })
