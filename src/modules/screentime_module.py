@@ -230,6 +230,11 @@ class ScreenTimeModule(BaseModule):
 
             self._save()
         logger.info("ScreenTime module shutdown complete")
+
+    
+    def get(self, date):
+        date = date.strftime("%Y-%m-%d")
+        return self.usage.get(date, {})
     
 
     # ----------------------- MODULE ACTIONS -----------------------

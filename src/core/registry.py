@@ -44,6 +44,7 @@ class ModuleRegistry:
             return None
 
     def get(self, cls_name):
+        print(cls_name, self._instances)
         return self._instances.get(cls_name)
 
     def load_all_modules(self):
@@ -62,11 +63,12 @@ class ModuleRegistry:
 
 
 
-MODULE_REGISTRY = ModuleRegistry()
 
 def load_registry():
+    MODULE_REGISTRY = ModuleRegistry()
     MODULE_REGISTRY.load_all_modules()   
     logger.info(f"Modules loaded: {list(MODULE_REGISTRY._instances.keys())}")     
+    return MODULE_REGISTRY
 
 
 

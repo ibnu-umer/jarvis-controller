@@ -15,8 +15,9 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QObject
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtCore import Qt
-from configs.config import WSL_BASE_URL
+from configs.config import WSL_BASE_URL, SCREENTIME_DATA
 
+from tray.screen_time_window import ScreenTimeWindow
 from core.logger import logger
 
 
@@ -90,9 +91,10 @@ class StatusStreamThread(threading.Thread):
 
 
 class Popup(QWidget):
-    def __init__(self, app, parent):
+    def __init__(self, app, parent, screen_time_obj=None):
         super().__init__()
         self._parent = parent
+        self.screen_time_obj = screen_time_obj
 
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
@@ -128,7 +130,18 @@ class Popup(QWidget):
         self.input.returnPressed.connect(self._send_command)
 
         self.response = QLabel("")
+        response_font = QFont()
+        response_font.setPointSize(6)
+        self.response.setFont(response_font)
         self.response.setWordWrap(True)
+
+        screen_usage_btn = QPushButton("U")
+        screen_usage_btn.setFixedWidth(30)
+        screen_usage_btn.clicked.connect(self._show_screen_usage)
+
+        info_row = QHBoxLayout()
+        info_row.addWidget(self.response)
+        info_row.addWidget(screen_usage_btn)
 
         self.task_list = QListWidget()
 
@@ -146,7 +159,7 @@ class Popup(QWidget):
         input_row.addWidget(close_btn)
 
         layout.addLayout(input_row)
-        layout.addWidget(self.response)
+        layout.addLayout(info_row)
         layout.addWidget(self.task_list)
 
 
@@ -325,10 +338,9 @@ class Popup(QWidget):
         return container
 
 
-    # def log_progress(self, user_input, parsed_intent, actions, status):
-    #     ui_state.update({
-    #         "user_input": user_input,
-    #         "parsed_intent": parsed_intent,
-    #         "actions": actions,
-    #         "status": status
-    #     })
+    def _show_screen_usage(self):
+        self.screen_time_window = ScreenTimeWindow(self.screen_time_obj)
+        self.screen_time_window.show()
+
+ 
+

@@ -1,19 +1,20 @@
 from flask import Flask, request, jsonify
 import threading, requests, inspect, asyncio
 from configs.config import WIN_HOST, WIN_PORT
-from core.registry import MODULE_REGISTRY, FUNCTION_REGISTRY, file_registry
+from core.registry import FUNCTION_REGISTRY, file_registry
 from core.logger import logger
 
 
 
 
 class WindowsListener:
-    def __init__(self, host=WIN_HOST, port=WIN_PORT):
+    def __init__(self, host=WIN_HOST, port=WIN_PORT, module_registry=None):
         self.host = host
         self.port = port
         self.app = Flask("WindowsListener")
         self.server_thread = None
         self.tray = None
+        self.module_registry = module_registry
         self._setup_routes()
 
 
@@ -24,7 +25,7 @@ class WindowsListener:
             if not func_info:
                 return jsonify({"error": f"Unknown action: {name}"}), 404
 
-            instance = MODULE_REGISTRY.get(func_info["class"])
+            instance = self.module_registry.get(func_info["class"])
             if not instance:
                 return jsonify({"error": f"No module instance for class {func_info['class']}"}), 500
 

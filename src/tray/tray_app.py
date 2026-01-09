@@ -20,7 +20,7 @@ class JarvisTray:
     ICON_SIZE = 64
     TEXT_ICON_CHAR = "J"
 
-    def __init__(self, backend_base=WSL_BASE_URL, ui_url=WIN_BASE_URL, shutdown_func=None):
+    def __init__(self, backend_base=WSL_BASE_URL, ui_url=WIN_BASE_URL, shutdown_func=None, screen_time_obj=None):
         self.backend_base = backend_base.rstrip("/")
         self.ui_url = ui_url
         self.shutdown_func = shutdown_func
@@ -29,7 +29,7 @@ class JarvisTray:
         self.last_checked = None
 
         self.app = QApplication(sys.argv)
-        self.popup = Popup(self.app, self)
+        self.popup = Popup(self.app, self, screen_time_obj=screen_time_obj)
         self.popup.hide()
 
         # Tray icon
