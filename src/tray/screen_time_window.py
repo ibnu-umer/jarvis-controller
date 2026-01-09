@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QListWidget, QListWidgetItem, QPushButton
 )
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QColor, QBrush
 from PyQt6.QtCore import Qt
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -60,7 +60,7 @@ class ScreenTimeWindow(QMainWindow):
         content.setSpacing(12)
 
         # Donut chart
-        self.figure = Figure(figsize=(5, 5))
+        self.figure = Figure(figsize=(5, 5), facecolor="#1e1e1e")
         self.canvas = FigureCanvas(self.figure)
         content.addWidget(self.canvas, 2)
 
@@ -68,7 +68,7 @@ class ScreenTimeWindow(QMainWindow):
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
 
-        title = QLabel("App Usage (Sorted)")
+        title = QLabel("App Usage")
         title.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
         right_layout.addWidget(title)
 
@@ -90,7 +90,6 @@ class ScreenTimeWindow(QMainWindow):
             self.current_date += timedelta(days=1)
             self.refresh()
 
-    # ---------- REFRESH ----------
     def refresh(self):
         self.date_label.setText(self.current_date.strftime("%d %b %Y"))
 
@@ -117,7 +116,7 @@ class ScreenTimeWindow(QMainWindow):
         total_seconds = sum(values)
 
         ax = self.figure.add_subplot(111)
-        ax.pie(
+        wedges, _ = ax.pie(
             values,
             startangle=90,
             wedgeprops=dict(width=0.35, edgecolor="white")
@@ -131,43 +130,44 @@ class ScreenTimeWindow(QMainWindow):
             ha="center",
             va="center",
             fontsize=14,
-            fontweight="bold"
+            fontweight="bold",
+            color="white"
         )
 
         self.canvas.draw()
 
-        for app, seconds in sorted_items:
-            self.list_widget.addItem(
-                QListWidgetItem(f"{app} — {format_duration(seconds)}")
+        for (app, seconds), wedge in zip(sorted_items, wedges):
+            if seconds < 120:
+                continue
+
+            r, g, b, _ = wedge.get_facecolor()
+            color = QColor(
+                int(r * 255),
+                int(g * 255),
+                int(b * 255)
             )
+            dot = QLabel("●")
+            dot.setStyleSheet(f"color: {color.name()};")
 
+            container = QWidget()
+            layout = QHBoxLayout(container)
+            layout.setContentsMargins(8, 2, 8, 2)
 
+            app_label = QLabel(app)
+            app_label.setStyleSheet("color: white;")
 
-# import sys
-# import random
-# from datetime import date
+            time_label = QLabel(format_duration(seconds))
+            time_label.setStyleSheet("color: white;")
+            time_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
-# from PyQt6.QtWidgets import QApplication
+            layout.insertWidget(0, dot)
+            layout.addWidget(app_label)
+            layout.addStretch()
+            layout.addWidget(time_label)
 
+            item = QListWidgetItem()
+            item.setSizeHint(container.sizeHint())
 
-# def mock_data_provider(day: date):
-#     random.seed(day.toordinal())
-#     return {
-#         "VS Code": random.randint(3000, 9000),
-#         "Chrome": random.randint(2000, 7000),
-#         "Spotify": random.randint(500, 2000),
-#         "Terminal": random.randint(800, 2500),
-#         "Discord": random.randint(600, 1800),
-#     }
+            self.list_widget.addItem(item)
+            self.list_widget.setItemWidget(item, container)
 
-
-# if __name__ == "__main__":
-#     # app = QApplication(sys.argv)
-
-#     # win = ScreenTimeWindow(mock_data_provider)
-#     # win.show()
-
-#     # sys.exit(app.exec())
-#     from src.core.registry import MODULE_REGISTRY
-
-#     print(MODULE_REGISTRY._instances.get("screentime_module"))
