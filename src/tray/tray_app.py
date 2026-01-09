@@ -29,6 +29,7 @@ class JarvisTray:
         self.last_checked = None
 
         self.app = QApplication(sys.argv)
+        self.app.setQuitOnLastWindowClosed(False)
         self.popup = Popup(self.app, self, screen_time_obj=screen_time_obj)
         self.popup.hide()
 
@@ -191,13 +192,14 @@ class JarvisTray:
     
 
     def quit_app(self):
-        if self.confirm_with_popup("Are you sure you want to quit Jarvis?"):
-            self.shutdown_func()
-            self.popup.close()
-            self.tray_icon.hide()
-            self.app.quit()
+        if not self.confirm_with_popup("Are you sure you want to quit Jarvis?"):
+            return
 
-            logger.info("Jarvis Tray stopped")
+        self.shutdown_func()
+        self.popup.close()
+        self.tray_icon.hide()
+        self.app.quit()
+        logger.info("Jarvis Tray stopped")
 
 
     def run(self):
