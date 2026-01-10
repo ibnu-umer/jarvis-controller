@@ -33,3 +33,6 @@ SCREENTIME_POLL_INTERVAL = 1.0
 SCREENTIME_SAVE_INTERVAL = 60
 
 LOG_LEVEL = logging.INFO
+
+ICON_PATH = "assets/app.ico"
+OFFLINE_ICON_PATH = "assets/app_offline.ico"

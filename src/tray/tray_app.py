@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QAction
 from PyQt6.QtCore import Qt, QTimer, QObject, pyqtSignal
 
-from configs.config import WIN_BASE_URL, WSL_BASE_URL
+from configs.config import WIN_BASE_URL, WSL_BASE_URL, ICON_PATH, OFFLINE_ICON_PATH
 from core.logger import logger
 from tray.popup import Popup 
 import keyboard, threading, httpx, asyncio
@@ -29,12 +29,13 @@ class JarvisTray:
         self.last_checked = None
 
         self.app = QApplication(sys.argv)
+        self.app.setWindowIcon(QIcon(ICON_PATH))
         self.app.setQuitOnLastWindowClosed(False)
         self.popup = Popup(self.app, self, screen_time_obj=screen_time_obj)
         self.popup.hide()
 
         # Tray icon
-        self.tray_icon = QSystemTrayIcon(QIcon(self.make_icon()), self.app)
+        self.tray_icon = QSystemTrayIcon(QIcon(OFFLINE_ICON_PATH), self.app)
         self.tray_icon.setToolTip("Jarvis Assistant")
 
         # Tray menu
@@ -62,23 +63,9 @@ class JarvisTray:
 
 
     # --------- Icon ---------
-    def make_icon(self):
-        pixmap = QPixmap(self.ICON_SIZE, self.ICON_SIZE)
-        pixmap.fill(Qt.GlobalColor.transparent)
-
-        painter = QPainter(pixmap)
-        color = QColor(88, 214, 141) if self.healthy else QColor(239, 68, 68)
-        painter.setBrush(color)
-        painter.setPen(Qt.GlobalColor.transparent)
-        painter.drawEllipse(0, 0, self.ICON_SIZE, self.ICON_SIZE)
-
-        font = QFont("Segoe UI", 28)
-        painter.setFont(font)
-        painter.setPen(QColor(255, 255, 255))
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, self.TEXT_ICON_CHAR)
-        painter.end()
-
-        return QIcon(pixmap)
+    def _set_icon(self):
+        icon_path = ICON_PATH if self.healthy else OFFLINE_ICON_PATH
+        self.tray_icon.setIcon(QIcon(icon_path))
     
 
     def register_shortcut(self):
@@ -103,7 +90,7 @@ class JarvisTray:
     def health_check(self):
         self.healthy = self.backend_ping()
         self.last_checked = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.tray_icon.setIcon(self.make_icon())
+        self._set_icon()
         self._build_menu()
 
 
