@@ -9,6 +9,7 @@ from typing import List
 
 from core.base_module import BaseModule
 from core.registry import file_registry, action
+from core.logger import logger
 
 
 
@@ -397,7 +398,7 @@ class FileController(BaseModule):
             return self.failure("Path does not exist.")
         
         def callback(changed_path, event_type):
-            print(f"Event: {event_type}, Path: {changed_path}")
+            logger.info(f"Event: {event_type}, Path: {changed_path}")
 
         class WatchHandler(FileSystemEventHandler):
             def dispatch(self, event):

@@ -44,7 +44,6 @@ class ModuleRegistry:
             return None
 
     def get(self, cls_name):
-        print(cls_name, self._instances)
         return self._instances.get(cls_name)
 
     def load_all_modules(self):

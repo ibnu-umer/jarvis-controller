@@ -83,7 +83,6 @@ class StatusStreamThread(threading.Thread):
     def handle_event(self, raw_line: bytes):
         try:
             payload = json.loads(raw_line.decode())
-            print(payload)
             ui_state.update(payload)
         except Exception:
             pass
