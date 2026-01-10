@@ -63,8 +63,9 @@ class JarvisTray:
 
 
     # --------- Icon ---------
-    def _set_icon(self):
-        icon_path = ICON_PATH if self.healthy else OFFLINE_ICON_PATH
+    def _set_icon(self, health):
+        icon_path = ICON_PATH if health else OFFLINE_ICON_PATH
+        logger.info(f"Icon changing. Backend online: {health}")
         self.tray_icon.setIcon(QIcon(icon_path))
     
 
@@ -88,9 +89,14 @@ class JarvisTray:
         
 
     def health_check(self):
-        self.healthy = self.backend_ping()
+        health = self.backend_ping()
         self.last_checked = time.strftime("%Y-%m-%d %H:%M:%S")
-        self._set_icon()
+        
+        # prevent unncessary icon setting
+        if health != self.healthy:
+            self._set_icon(health)
+
+        self.healthy = health
         self._build_menu()
 
 

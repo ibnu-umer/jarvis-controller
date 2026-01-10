@@ -34,5 +34,5 @@ SCREENTIME_SAVE_INTERVAL = 60
 
 LOG_LEVEL = logging.INFO
 
-ICON_PATH = "assets/app.ico"
-OFFLINE_ICON_PATH = "assets/app_offline.ico"
+ICON_PATH = get_resource_path("assets/app.ico")
+OFFLINE_ICON_PATH = get_resource_path("assets/app_offline.ico")
