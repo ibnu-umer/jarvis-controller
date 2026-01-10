@@ -104,9 +104,10 @@ class ScreenTimeWindow(QMainWindow):
         if not app_usage:
             self.canvas.draw()
             return
-
+        
+        usage_cleaned = {app:sec for app, sec in app_usage.items() if sec > 120}
         sorted_items = sorted(
-            app_usage.items(),
+            usage_cleaned.items(),
             key=lambda x: x[1],
             reverse=True
         )
@@ -137,9 +138,6 @@ class ScreenTimeWindow(QMainWindow):
         self.canvas.draw()
 
         for (app, seconds), wedge in zip(sorted_items, wedges):
-            if seconds < 120:
-                continue
-
             r, g, b, _ = wedge.get_facecolor()
             color = QColor(
                 int(r * 255),
