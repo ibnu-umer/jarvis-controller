@@ -55,9 +55,8 @@ class AppController(BaseModule):
                 subprocess.run(f'start "" "{app_path}"', shell=True)
                 return self.success(f"Opened Windows URI: {app_path}")
 
-            # Normal Windows app
             launch_windows_app(app_path, folder_path)
-            return self.success(f"{app_name if app_name else "App"} opened successfully")
+            return self.success(f"opened {app_name if app_name else "App"}")
 
         except Exception as e:
             return self.failure(f"Error opening {app_path}: {e}")
