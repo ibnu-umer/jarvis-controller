@@ -3,6 +3,7 @@ import threading, requests, inspect, asyncio
 from configs.config import WIN_HOST, WIN_PORT
 from core.registry import FUNCTION_REGISTRY, file_registry
 from core.logger import logger
+from core.tts import say
 
 
 
@@ -42,6 +43,11 @@ class WindowsListener:
                     res = action_func(**params)
 
                 logger.info(res)
+
+                message = res["message"]
+                if message:
+                    threading.Thread(target=lambda: asyncio.run(say(message)), daemon=True).start()
+
                 return jsonify({
                     "status": "success",
                     "action": name,
