@@ -124,5 +124,12 @@ class WindowsListener:
         self.server_thread = None
 
 
+    # async def speak(self, text: str):
+    #     try:
+    #         await say(text)
+    #     except Exception as e:
+    #         logger.info(f"TTS failed: {e}")
+
+
 
     

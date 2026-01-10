@@ -1,13 +1,16 @@
 import asyncio
 import tempfile
 from pathlib import Path
-
-import edge_tts
+import edge_tts, pyttsx3
 import sounddevice as sd
 import soundfile as sf
 
+from core.logger import logger
+
+
 
 VOICE = "en-US-GuyNeural"
+_offline_engine = pyttsx3.init()
 
 
 async def _generate_tts_async(text: str, output_path: Path):
@@ -45,9 +48,19 @@ async def say(text: str):
     try:
         await _generate_tts(text, temp_path)
         _play_audio(temp_path)
+    except Exception as e:
+        say_offline(text)
+        logger.error(f"Edge-TTS Failed: {e}")
     finally:
         if temp_path.exists():
             temp_path.unlink()
+
+
+def say_offline(text: str):
+    _offline_engine.say(text)
+    _offline_engine.runAndWait()
+
+
 
 
 if __name__ == "__main__":
