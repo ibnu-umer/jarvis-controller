@@ -12,6 +12,7 @@ a = Analysis(
         ('configs/file_registry.json', 'configs'),
         ('configs/process_names.json', 'configs'),
         ('src/modules', 'modules'),
+        ('configs/assets', 'configs/assets')
     ],
     hiddenimports=hidden_mods + [
         'pytz', 'psutil', 'pythoncom', 'win32gui', 'win32process',
