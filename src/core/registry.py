@@ -30,9 +30,42 @@ def action(name=None, params=None):
 
 
 
+class FileRegistry:
+    def __init__(self, registry_file: str = FILE_REGISTRY_PATH):
+        self.registry_file = Path(registry_file)
+        self.registry_file.parent.mkdir(parents=True, exist_ok=True)
+
+        if not self.registry_file.exists():
+            self.registry_file.write_text(json.dumps({}, indent=4), encoding="utf-8")
+
+        self._entries = {} 
+        self.load_file_registries()
+
+    def load_file_registries(self):
+        if self.registry_file.exists():
+            try:
+                with open(self.registry_file, "r", encoding="utf-8") as f:
+                    self._entries = json.load(f)
+                    logger.info("File Registry loaded successfully.")
+            except Exception as e:
+                logger.error(f"Error loading registry: {e}")
+                self._entries = {}
+    
+    
+
+    def get_path(self, app_name: str):
+        return self._entries.get(app_name)
+    
+
+    def get_files(self):
+        return self._entries
+    
+
+
 class ModuleRegistry:
     def __init__(self):
         self._instances = {}
+        self.load_all_modules()
 
     def register(self, cls):
         try:
@@ -58,39 +91,15 @@ class ModuleRegistry:
             self.register(cls)
 
         logger.info(f"Modules loaded: {list(self._instances.keys())}")   
+    
+    def get_module(self, module_name):
+        return self._instances.get(module_name)
+    
+    def get_modules(self):
         return self._instances
         
-
-class FileRegistry:
-    def __init__(self, registry_file: str = FILE_REGISTRY_PATH):
-        self.registry_file = Path(registry_file)
-        self.registry_file.parent.mkdir(parents=True, exist_ok=True)
-
-        if not self.registry_file.exists():
-            self.registry_file.write_text(json.dumps({}, indent=4), encoding="utf-8")
-
-        self.entries = {} 
-
-    def load_file_registries(self):
-        if self.registry_file.exists():
-            try:
-                with open(self.registry_file, "r", encoding="utf-8") as f:
-                    self.entries = json.load(f)
-                    logger.info("File Registry loaded successfully.")
-            except Exception as e:
-                logger.error(f"Error loading registry: {e}")
-                self.entries = {}
-    
-        return self.entries
-    
-
-    def get_path(self, app_name: str):
-        return self.entries.get(app_name)
     
 
 
 file_registry = FileRegistry()
-registered_files = file_registry.load_file_registries()
-
 module_registry = ModuleRegistry()
-registered_modules = module_registry.load_all_modules()

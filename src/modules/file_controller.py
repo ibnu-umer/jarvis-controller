@@ -8,7 +8,7 @@ from watchdog.events import FileSystemEventHandler
 from typing import List
 
 from core.base_module import BaseModule
-from core.registry import registered_files, action
+from core.registry import file_registry, action
 from core.logger import logger
 
 
@@ -17,7 +17,7 @@ from core.logger import logger
 
 class FileController(BaseModule):
     def __init__(self):
-        self.file_registry = registered_files
+        self.file_registry = file_registry
 
     # ------------------------- FILE OPERATIONS ------------------------- #
 

@@ -2,12 +2,12 @@ import subprocess
 import requests
 from pathlib import Path
 from core.base_module import BaseModule
-from core.registry import registered_files, action
+from core.registry import file_registry, action
 
 
 class VLCController(BaseModule):
     def __init__(self):
-        self.file_registry = registered_files
+        self.file_registry = file_registry
         self.vlc_url = "http://127.0.0.1:8080"
         self.vlc_password = "user"
 
