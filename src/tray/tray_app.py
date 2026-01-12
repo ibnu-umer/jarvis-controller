@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QAction
 from PyQt6.QtCore import Qt, QTimer, QObject, pyqtSignal
 
-from configs.config import WIN_BASE_URL, WSL_BASE_URL, ICON_PATH, OFFLINE_ICON_PATH
+from configs.config import ICON_PATH
 from core.logger import logger
 from tray.popup import Popup 
 from tray.screen_time_window import ScreenTimeWindow
@@ -40,7 +40,7 @@ class JarvisTray:
         self.popup.hide()
 
         # Tray icon
-        self.tray_icon = QSystemTrayIcon(QIcon(OFFLINE_ICON_PATH), self.app)
+        self.tray_icon = QSystemTrayIcon(QIcon(ICON_PATH), self.app)
         self.tray_icon.setToolTip("Jarvis Assistant")
 
         # Tray menu
@@ -65,13 +65,6 @@ class JarvisTray:
 
         logger.info("Jarvis Tray started")
         
-
-
-    # --------- Icon ---------
-    def _set_icon(self, health):
-        icon_path = ICON_PATH if health else OFFLINE_ICON_PATH
-        logger.info(f"Icon changing. Backend online: {health}")
-        self.tray_icon.setIcon(QIcon(icon_path))
     
 
     def register_shortcut(self):

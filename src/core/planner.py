@@ -1,10 +1,10 @@
-from src.core.intent_parser import IntentParser, Intent
-from src.core import templates
+from core.intent_parser import IntentParser, Intent
+from core import templates
 from dataclasses import dataclass
 from typing import Dict, Any
-from src.core.logger import logger
-from src.core.templates import TEMPLATE_REGISTRY
-from src.core.intent_classifier import classify_intent
+from core.logger import logger
+from core.templates import TEMPLATE_REGISTRY
+from core.intent_classifier import classify_intent
 import importlib
 
 
