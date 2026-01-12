@@ -12,9 +12,6 @@ from pathlib import Path
 
 
 FUNCTION_REGISTRY = {}
-registered_modules = None
-registered_files = None
-
 
 def action(name=None, params=None):
     def wrapper(func):
@@ -87,16 +84,13 @@ class FileRegistry:
         return self.entries
     
 
+    def get_path(self, app_name: str):
+        return self.entries.get(app_name)
+    
 
 
-def load_registries():
-    global registered_modules, registered_files
+file_registry = FileRegistry()
+registered_files = file_registry.load_file_registries()
 
-    module_registry = ModuleRegistry()
-    registered_modules = module_registry.load_all_modules()   
-
-    file_registry = FileRegistry()
-    registered_files = file_registry.load_file_registries()
-
-    return registered_modules, registered_files
-
+module_registry = ModuleRegistry()
+registered_modules = module_registry.load_all_modules()
