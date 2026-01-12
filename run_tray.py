@@ -10,7 +10,7 @@ if SRC_PATH not in sys.path:
 try:
     from tray.tray_app import JarvisTray
     # from api.listener import WindowsListener
-    from core.registry import registered_modules, registered_files
+    from core.registry import file_registry, module_registry
     from core.logger import logger
     from core.planner import Planner, PlannerInput
     from core.executor import Executor
@@ -24,8 +24,8 @@ except Exception as e:
 
 
 
-def run_tray(pipeline_func):
-    tray = JarvisTray(pipeline_func)
+def run_tray(screen_time_obj, pipeline_func):
+    tray = JarvisTray(screen_time_obj=screen_time_obj, pipeline_func=pipeline_func)
     loop = QEventLoop(tray.app)
     asyncio.set_event_loop(loop)
 
@@ -43,6 +43,9 @@ def run_tray(pipeline_func):
 
 if __name__ == "__main__":
     try:
+        registered_files = file_registry.get_files()
+        registered_modules = module_registry.get_modules()
+
         planner = Planner(registered_modules, registered_files)
         executor = Executor(registered_modules, registered_files)
 
@@ -69,7 +72,6 @@ if __name__ == "__main__":
 
         
 
-        # screen_time_obj = registered_modules.get("ScreenTimeModule")
 
         # windows_listener = WindowsListener(module_registry=module_registry)
         # listener_thread = threading.Thread(target=windows_listener.start, daemon=True)
@@ -80,7 +82,10 @@ if __name__ == "__main__":
         #     screen_time_obj.shutdown()
 
         # run_tray(windows_listener, shutdown, screen_time_obj=screen_time_obj)
-        run_tray(run_pipeline)
+
+        screen_time_obj = registered_modules.get("ScreenTimeModule")
+        run_tray(screen_time_obj, run_pipeline)
 
     except Exception as e:
         logger.error(f"Error while running script: {e}")
+        traceback.print_exc()

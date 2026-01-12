@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt, QTimer, QObject, pyqtSignal
 from configs.config import WIN_BASE_URL, WSL_BASE_URL, ICON_PATH, OFFLINE_ICON_PATH
 from core.logger import logger
 from tray.popup import Popup 
+from tray.screen_time_window import ScreenTimeWindow
 import keyboard, threading, httpx, asyncio
 
 
@@ -20,7 +21,7 @@ class JarvisTray:
     ICON_SIZE = 64
     TEXT_ICON_CHAR = "J"
 
-    def __init__(self, pipeline_func):
+    def __init__(self, pipeline_func, screen_time_obj):
         # self.backend_base = backend_base.rstrip("/")
         # self.ui_url = ui_url
         # self.shutdown_func = shutdown_func
@@ -32,7 +33,10 @@ class JarvisTray:
         self.app = QApplication(sys.argv)
         self.app.setWindowIcon(QIcon(ICON_PATH))
         self.app.setQuitOnLastWindowClosed(False)
-        self.popup = Popup(self.app, self, pipeline_func=pipeline_func)
+
+        self.screen_time_window = ScreenTimeWindow(screen_time_obj)
+
+        self.popup = Popup(self.app, self, self.screen_time_window, pipeline_func=pipeline_func)
         self.popup.hide()
 
         # Tray icon

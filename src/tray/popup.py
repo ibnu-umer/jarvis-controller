@@ -90,10 +90,11 @@ class StatusStreamThread(threading.Thread):
 
 
 class Popup(QWidget):
-    def __init__(self, app, parent, pipeline_func=None):
+    def __init__(self, app, parent, screen_time_window, pipeline_func=None):
         super().__init__()
         self._parent = parent
         self.pipeline_func = pipeline_func
+        self.screen_time_window = screen_time_window
 
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
@@ -339,7 +340,6 @@ class Popup(QWidget):
 
 
     def _show_screen_usage(self):
-        self.screen_time_window = ScreenTimeWindow(self.screen_time_obj)
         self.screen_time_window.show()
 
  
