@@ -2,7 +2,8 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 from rapidfuzz import process
 from pathlib import Path
-import os
+import os, inspect, asyncio
+from core.registry import FUNCTION_REGISTRY
 
 
 
@@ -18,9 +19,10 @@ class ExecutionResult:
 
 
 class Executor:
-    def __init__(self, controller_client, state_provider, file_registry):
-        self.controller = controller_client
-        self.state = state_provider
+    def __init__(self, module_registry, file_registry):
+        # self.controller = controller_client
+        # self.state = state_provider
+        self.module_registry = module_registry
         self.file_registry = file_registry
 
     async def execute(self, user_input: str, plan) -> ExecutionResult:
@@ -95,18 +97,25 @@ class Executor:
 
                     last_error = None
                     for _ in range(retries + 1):
-                        response = await self.controller.trigger(
-                            action=node["controller"],
-                            params=resolved_args
-                        )
+                        func_name = node["controller"]
+                        func_info = FUNCTION_REGISTRY.get(func_name)
 
+                        # if not func_info:
+                        #     return f"Unknown action: {func_name}"
 
-                        if not isinstance(response, dict):
-                            raise RuntimeError(
-                                f"Controller '{node['controller']}' must return dict"
-                            )
-                        
-                        result = response["result"]
+                        instance = self.module_registry.get(func_info["class"])
+                        # if not instance:
+                        #     return f"No module instance for class {func_info['class']}"
+
+                        action_func = getattr(instance, func_info["function"], None)
+                        # if not callable(action_func):
+                        #     return f"Function not found: {func_info['function']}"
+
+                        if inspect.iscoroutinefunction(action_func):
+                            result = asyncio.run(action_func(**resolved_args))
+                        else:
+                            result = action_func(**resolved_args)
+                    
                         if result.get("success"):
                             if output_key:
                                 data = result["data"].get(fetch) if fetch else result.get("data")

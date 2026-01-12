@@ -10,10 +10,11 @@ if SRC_PATH not in sys.path:
 try:
     from tray.tray_app import JarvisTray
     # from api.listener import WindowsListener
-    from core.registry import load_registries
+    from core.registry import registered_modules, registered_files
     from core.logger import logger
     from core.planner import Planner, PlannerInput
     from core.executor import Executor
+    from core.tts import say
 except Exception as e:
     traceback.print_exc()
     print(f"Error in tray: {e}")
@@ -42,10 +43,8 @@ def run_tray(pipeline_func):
 
 if __name__ == "__main__":
     try:
-        registered_modules, registered_files = load_registries()
         planner = Planner(registered_modules, registered_files)
-        print(registered_files)
-        executor = None
+        executor = Executor(registered_modules, registered_files)
 
         async def run_pipeline(user_input: str):
             try:
@@ -57,8 +56,12 @@ if __name__ == "__main__":
                 
                 plan = planner.plan(planner_input)
                 result = await executor.execute(user_input, plan.task_graph)
-                print(result)
-                # return plan, result  
+
+                if result.message:
+                    await say(result.message)
+
+                elif result.error:
+                    await say(result.error)
             
             except Exception as e:
                 traceback.print_exc()

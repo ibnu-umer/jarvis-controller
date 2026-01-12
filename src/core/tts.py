@@ -10,7 +10,7 @@ from core.logger import logger
 
 
 VOICE = "en-US-GuyNeural"
-_offline_engine = pyttsx3.init()
+reported = False
 
 
 async def _generate_tts_async(text: str, output_path: Path):
@@ -35,10 +35,22 @@ def _play_audio(path: Path):
     sd.wait()
 
 
+def say_offline(text: str):
+    try:
+        _offline_engine = pyttsx3.init()
+        _offline_engine.say(text)
+        _offline_engine.runAndWait()
+        _offline_engine.stop()
+    except Exception as e:
+        logger.debug(f"PYTTSX3 Failed: {e}")
+
+
 async def say(text: str):
     """
     Generate TTS, play it, and clean up temp audio.
     """
+    global reported
+
     with tempfile.NamedTemporaryFile(
         suffix=".wav",
         delete=False
@@ -49,16 +61,14 @@ async def say(text: str):
         await _generate_tts(text, temp_path)
         _play_audio(temp_path)
     except Exception as e:
+        if not reported:
+            logger.debug(f"Edge-TTS Failed: {e}")
+            reported = True
         say_offline(text)
-        logger.error(f"Edge-TTS Failed: {e}")
     finally:
         if temp_path.exists():
             temp_path.unlink()
 
-
-def say_offline(text: str):
-    _offline_engine.say(text)
-    _offline_engine.runAndWait()
 
 
 
