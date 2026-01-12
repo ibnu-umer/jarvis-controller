@@ -12,6 +12,9 @@ from pathlib import Path
 
 
 FUNCTION_REGISTRY = {}
+registered_modules = None
+registered_files = None
+
 
 def action(name=None, params=None):
     def wrapper(func):
@@ -43,9 +46,6 @@ class ModuleRegistry:
             logger.error(f"Failed to instantiate {cls.__name__}: {e}")
             return None
 
-    def get(self, cls_name):
-        return self._instances.get(cls_name)
-
     def load_all_modules(self):
         # Dynamically import all modules inside src/modules
         logger.debug(f"Modules Path: {modules_path}")
@@ -60,17 +60,9 @@ class ModuleRegistry:
         for cls in BaseModule.__subclasses__():
             self.register(cls)
 
-
-
-
-def load_registry():
-    MODULE_REGISTRY = ModuleRegistry()
-    MODULE_REGISTRY.load_all_modules()   
-    logger.info(f"Modules loaded: {list(MODULE_REGISTRY._instances.keys())}")     
-    return MODULE_REGISTRY
-
-
-
+        logger.info(f"Modules loaded: {list(self._instances.keys())}")   
+        return self._instances
+        
 
 class FileRegistry:
     def __init__(self, registry_file: str = FILE_REGISTRY_PATH):
@@ -81,55 +73,30 @@ class FileRegistry:
             self.registry_file.write_text(json.dumps({}, indent=4), encoding="utf-8")
 
         self.entries = {} 
-        self._load_registry()
 
-
-    def _load_registry(self):
+    def load_file_registries(self):
         if self.registry_file.exists():
             try:
                 with open(self.registry_file, "r", encoding="utf-8") as f:
                     self.entries = json.load(f)
-                    logger.info("Registry loaded successfully.")
+                    logger.info("File Registry loaded successfully.")
             except Exception as e:
                 logger.error(f"Error loading registry: {e}")
                 self.entries = {}
-
-
-    def _save_registry(self):
-        try:
-            with open(self.registry_file, "w", encoding="utf-8") as f:
-                json.dump(self.entries, f, indent=4)
-        except Exception as e:
-            logger.error(f"Error saving registry: {e}")
-
-
-    def add_entry(self, name: str, path: str) -> bool:
-        p = Path(path)
-        if not p.exists():
-            return False
-        self.entries[name] = str(p.resolve())
-        self._save_registry()
-        return True
     
-
-    def remove_entry(self, name: str) -> bool:
-        if name in self.entries:
-            self.entries.pop(name)
-            self._save_registry()
-            return True
-        return False
-    
-
-    def get_path(self, name: str) -> str | None:
-        return self.entries.get(name)
-    
-
-    def list_entries(self) -> dict:
-        return self.entries.copy()
-    
-
-    def get_registered_files(self):
         return self.entries
     
 
-file_registry = FileRegistry()
+
+
+def load_registries():
+    global registered_modules, registered_files
+
+    module_registry = ModuleRegistry()
+    registered_modules = module_registry.load_all_modules()   
+
+    file_registry = FileRegistry()
+    registered_files = file_registry.load_file_registries()
+
+    return registered_modules, registered_files
+

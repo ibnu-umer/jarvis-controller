@@ -90,10 +90,10 @@ class StatusStreamThread(threading.Thread):
 
 
 class Popup(QWidget):
-    def __init__(self, app, parent, screen_time_obj=None):
+    def __init__(self, app, parent, pipeline_func=None):
         super().__init__()
         self._parent = parent
-        self.screen_time_obj = screen_time_obj
+        self.pipeline_func = pipeline_func
 
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
@@ -287,13 +287,14 @@ class Popup(QWidget):
 
 
     async def _send_command_async(self, text):
-        try:
-            resp = await self._parent.backend_command_trigger(text)
-            self.stream_thread = StatusStreamThread(resp["command_id"])
-            self.stream_thread.start()
-        except Exception as e:
-            logger.warning(f"Backend not reachable: {e}")
-            self.response.setText("Backend not reachable")
+        await self.pipeline_func(text)
+        # try:
+        #     resp = await self._parent.backend_command_trigger(text)
+        #     self.stream_thread = StatusStreamThread(resp["command_id"])
+        #     self.stream_thread.start()
+        # except Exception as e:
+        #     logger.warning(f"Backend not reachable: {e}")
+        #     self.response.setText("Backend not reachable")
 
     # ---------- STATE UPDATE ----------
 

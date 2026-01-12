@@ -20,10 +20,11 @@ class JarvisTray:
     ICON_SIZE = 64
     TEXT_ICON_CHAR = "J"
 
-    def __init__(self, backend_base=WSL_BASE_URL, ui_url=WIN_BASE_URL, shutdown_func=None, screen_time_obj=None):
-        self.backend_base = backend_base.rstrip("/")
-        self.ui_url = ui_url
-        self.shutdown_func = shutdown_func
+    def __init__(self, pipeline_func):
+        # self.backend_base = backend_base.rstrip("/")
+        # self.ui_url = ui_url
+        # self.shutdown_func = shutdown_func
+        self.pipeline_func = pipeline_func
 
         self.healthy = False
         self.last_checked = None
@@ -31,7 +32,7 @@ class JarvisTray:
         self.app = QApplication(sys.argv)
         self.app.setWindowIcon(QIcon(ICON_PATH))
         self.app.setQuitOnLastWindowClosed(False)
-        self.popup = Popup(self.app, self, screen_time_obj=screen_time_obj)
+        self.popup = Popup(self.app, self, pipeline_func=pipeline_func)
         self.popup.hide()
 
         # Tray icon
@@ -44,9 +45,9 @@ class JarvisTray:
         self.tray_icon.setContextMenu(self.menu)
 
         # Timer for backend ping
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.health_check)
-        self.timer.start(self.PING_INTERVAL)
+        # self.timer = QTimer()
+        # self.timer.timeout.connect(self.health_check)
+        # self.timer.start(self.PING_INTERVAL)
 
         self.tray_icon.show()
 
@@ -123,10 +124,10 @@ class JarvisTray:
         open_ui_action.triggered.connect(self.open_ui)
 
         refresh_action = QAction("Ping backend", self.menu)
-        refresh_action.triggered.connect(self.health_check)
+        # refresh_action.triggered.connect(self.health_check)
 
         reload_data_action = QAction("Refresh Data", self.menu)
-        reload_data_action.triggered.connect(lambda: self.call_action("refresh"))
+        # reload_data_action.triggered.connect(lambda: self.call_action("refresh"))
 
         open_popup_action = QAction("Open Jarvis Popup", self.menu)
         open_popup_action.triggered.connect(self.toggle_popup)
@@ -160,7 +161,7 @@ class JarvisTray:
                 logger.warning(f"Action {action_name} returned {r.status_code}: {r.text}")
         except Exception as e:
             logger.error(f"Action call failed: {e}")
-        self.health_check()
+        # self.health_check()
 
 
     def toggle_popup(self):
@@ -188,7 +189,7 @@ class JarvisTray:
         if not self.confirm_with_popup("Are you sure you want to quit Jarvis?"):
             return
 
-        self.shutdown_func()
+        # self.shutdown_func()
         self.popup.close()
         self.tray_icon.hide()
         self.app.quit()

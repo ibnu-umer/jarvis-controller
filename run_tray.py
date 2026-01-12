@@ -1,4 +1,4 @@
-import threading, sys, os, asyncio
+import threading, sys, os, asyncio, traceback
 from qasync import QEventLoop
 
 
@@ -9,23 +9,25 @@ if SRC_PATH not in sys.path:
 
 try:
     from tray.tray_app import JarvisTray
-    from api.listener import WindowsListener
-    from core.registry import load_registry
+    # from api.listener import WindowsListener
+    from core.registry import load_registries
     from core.logger import logger
+    from core.planner import Planner, PlannerInput
+    from core.executor import Executor
 except Exception as e:
-    print(e)
+    traceback.print_exc()
+    print(f"Error in tray: {e}")
 
 
 
 
 
 
-def run_tray(windows_listener, shutdown_func, screen_time_obj):
-    tray = JarvisTray(shutdown_func=shutdown_func, screen_time_obj=screen_time_obj)
+def run_tray(pipeline_func):
+    tray = JarvisTray(pipeline_func)
     loop = QEventLoop(tray.app)
     asyncio.set_event_loop(loop)
 
-    windows_listener.tray = tray
 
     with loop:
         loop.run_forever()
@@ -40,18 +42,42 @@ def run_tray(windows_listener, shutdown_func, screen_time_obj):
 
 if __name__ == "__main__":
     try:
-        module_registry = load_registry()
-        screen_time_obj = module_registry._instances.get("ScreenTimeModule")
+        registered_modules, registered_files = load_registries()
+        planner = Planner(registered_modules, registered_files)
+        print(registered_files)
+        executor = None
 
-        windows_listener = WindowsListener(module_registry=module_registry)
-        listener_thread = threading.Thread(target=windows_listener.start, daemon=True)
-        listener_thread.start()
+        async def run_pipeline(user_input: str):
+            try:
+                planner_input = PlannerInput(
+                    user_input=user_input,
+                    memory={},
+                    system_state={}
+                )
+                
+                plan = planner.plan(planner_input)
+                result = await executor.execute(user_input, plan.task_graph)
+                print(result)
+                # return plan, result  
+            
+            except Exception as e:
+                traceback.print_exc()
+                logger.error(f"Error in run pipeline: {e}")
 
-        def shutdown():
-            windows_listener.stop()
-            screen_time_obj.shutdown()
+        
 
-        run_tray(windows_listener, shutdown, screen_time_obj=screen_time_obj)
+        # screen_time_obj = registered_modules.get("ScreenTimeModule")
+
+        # windows_listener = WindowsListener(module_registry=module_registry)
+        # listener_thread = threading.Thread(target=windows_listener.start, daemon=True)
+        # listener_thread.start()
+
+        # def shutdown():
+        #     windows_listener.stop()
+        #     screen_time_obj.shutdown()
+
+        # run_tray(windows_listener, shutdown, screen_time_obj=screen_time_obj)
+        run_tray(run_pipeline)
 
     except Exception as e:
         logger.error(f"Error while running script: {e}")

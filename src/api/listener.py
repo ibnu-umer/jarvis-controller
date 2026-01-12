@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import threading, requests, inspect, asyncio
 from configs.config import WIN_HOST, WIN_PORT
-from core.registry import FUNCTION_REGISTRY, file_registry
+from core.registry import FUNCTION_REGISTRY, registered_files
 from core.logger import logger
 from core.tts import say
 
