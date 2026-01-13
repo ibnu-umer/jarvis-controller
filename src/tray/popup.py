@@ -19,7 +19,7 @@ from configs.config import WSL_BASE_URL, SCREENTIME_DATA
 
 from tray.screen_time_window import ScreenTimeWindow
 from core.logger import logger
-from core.tts import say
+from core.tts import TTS
 
 
 # ================= CONFIG =================
@@ -96,6 +96,7 @@ class Popup(QWidget):
         self._parent = parent
         self.command_runner = command_runner
         self.screen_time_window = screen_time_window
+        self.tts = TTS()
 
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
@@ -298,7 +299,7 @@ class Popup(QWidget):
             "message": result.message if result.message else result.error
         })
         self._on_state_update(res)
-        asyncio.create_task(say(res["message"]))
+        asyncio.create_task(self.tts.say(res["message"]))
  
 
     # ---------- STATE UPDATE ----------

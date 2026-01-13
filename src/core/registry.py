@@ -50,17 +50,13 @@ class FileRegistry:
             except Exception as e:
                 logger.error(f"Error loading registry: {e}")
                 self._entries = {}
-    
-    
 
     def get_path(self, app_name: str):
         return self._entries.get(app_name)
     
-
     def get_files(self):
         return self._entries
     
-
     def match_key(self, text):
         for name, path in self._entries.items():
             if name in text:

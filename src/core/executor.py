@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
-from rapidfuzz import process
-from pathlib import Path
-import os, inspect, asyncio
-from core.registry import FUNCTION_REGISTRY, file_registry, module_registry
+import inspect, asyncio
+from core.registry import FUNCTION_REGISTRY, module_registry
 
 
 
@@ -22,15 +20,6 @@ class Executor:
 
     async def execute(self, user_input: str, plan) -> ExecutionResult:
         return  await self._execute_graph(user_input, plan)
-
-    async def _execute_action(self, user_input, action) -> ExecutionResult:
-        res = await self.controller.trigger(action.action, action.params)
-        status = res["result"]["status"]
-        await self.controller.log_progress(
-            user_input, action.action, action.action, status
-        )
-        return res
-
 
     async def _execute_graph(self, user_input, graph) -> ExecutionResult:
         tg = graph["task_graph"]
@@ -94,18 +83,9 @@ class Executor:
                     for _ in range(retries + 1):
                         func_name = node["controller"]
                         func_info = FUNCTION_REGISTRY.get(func_name)
-
-                        # if not func_info:
-                        #     return f"Unknown action: {func_name}"
-
                         instance = module_registry.get_module(func_info["class"])
-                        # if not instance:
-                        #     return f"No module instance for class {func_info['class']}"
-
                         action_func = getattr(instance, func_info["function"], None)
-                        # if not callable(action_func):
-                        #     return f"Function not found: {func_info['function']}"
-
+      
                         if inspect.iscoroutinefunction(action_func):
                             result = asyncio.run(action_func(**resolved_args))
                         else:
@@ -165,6 +145,7 @@ class Executor:
                 context
             )
 
+
     # ---------------- HELPERS ----------------
 
     def _resolve_args(self, args: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
@@ -219,66 +200,4 @@ class Executor:
             context=context
         )
 
-
-
-    def fuzzy_select(self, query, choices):
-        match, score, idx = process.extractOne(query, choices)
-        return match
-
-    def build_path(self, parent_name: str = None, folder: str = None, path: str = None) -> str:
-        if path:
-            path = path.strip()
-
-            # Convert Windows path → WSL accessible
-            if ":" in path and "\\" in path:
-                # Windows → /mnt/c style
-                drive = path[0].lower()
-                rest = path[2:].replace("\\", "/")
-                wsl_path = f"/mnt/{drive}/{rest}"
-
-                # optional check (works in WSL for both files/folders)
-                exists = os.path.exists(wsl_path)
-
-                return wsl_path if exists else path  # fallback to original
-
-            # Already WSL-style path
-            if path.startswith("/") and os.path.exists(path):
-                return path
-
-            return path
-
-
-        if parent_name and not folder:
-            base = file_registry.get_path(parent_name)
-            if not base:
-                raise ValueError(f"No base path found for: {parent_name}")
-            return str(base)
-
-
-        if parent_name and folder:
-            base = file_registry.get_path(parent_name)
-            if not base:
-                raise ValueError(f"No base path found for: {parent_name}")
-
-            base_str = str(base)
-
-            # WSL Unix: /mnt/c/projects
-            if base_str.startswith("/mnt/"):
-                return f"{base_str.rstrip('/')}/{folder}"
-
-            # UNC (Windows path exposed to WSL): \\wsl$
-            if base_str.lower().startswith("\\\\wsl$"):
-                return f"{base_str.rstrip('\\')}\\{folder}"
-
-            # Windows-style path: C:\projects
-            if ":" in base_str:
-                win = str(Path(base_str) / folder)
-                # Convert to WSL so WSL-side can verify load-it
-                drive = win[0].lower()
-                rest = win[2:].replace("\\", "/")
-                return f"/mnt/{drive}/{rest}"
-
-            raise ValueError(f"Unrecognized path format: {base_str}")
-
-        raise ValueError("Invalid path arguments")
 
