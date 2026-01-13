@@ -23,7 +23,7 @@ class ScreenTimeWindow(QMainWindow):
         self.current_date = date.today()
 
         self.setWindowTitle("Screen Time Usage")
-        self.resize(SCREEN_USAGE_WIN_HEIGHT, SCREEN_USAGE_WIN_WIDTH)
+        self.resize(SCREEN_USAGE_WIN_WIDTH, SCREEN_USAGE_WIN_HEIGHT)
         self._build_ui()
 
     def _build_ui(self):
@@ -172,7 +172,7 @@ class ScreenTimeWindow(QMainWindow):
     
     # ---------- HELPERS -------------
 
-    def format_duration(seconds: int) -> str:
+    def format_duration(self, seconds: int) -> str:
         h = seconds // 3600
         m = (seconds % 3600) // 60
         return f"{h}h {m}m"
