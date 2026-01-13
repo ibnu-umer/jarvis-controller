@@ -26,6 +26,7 @@ class JarvisTray:
         # self.ui_url = ui_url
         # self.shutdown_func = shutdown_func
         self.pipeline_func = pipeline_func
+        self.screen_time_obj = screen_time_obj
 
         self.healthy = False
         self.last_checked = None
@@ -186,7 +187,7 @@ class JarvisTray:
         if not self.confirm_with_popup("Are you sure you want to quit Jarvis?"):
             return
 
-        # self.shutdown_func()
+        self.screen_time_obj.shutdown()
         self.popup.close()
         self.tray_icon.hide()
         self.app.quit()

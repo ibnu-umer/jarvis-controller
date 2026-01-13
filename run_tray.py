@@ -66,19 +66,6 @@ if __name__ == "__main__":
                 traceback.print_exc()
                 logger.error(f"Error in run pipeline: {e}")
 
-        
-
-
-        # windows_listener = WindowsListener(module_registry=module_registry)
-        # listener_thread = threading.Thread(target=windows_listener.start, daemon=True)
-        # listener_thread.start()
-
-        # def shutdown():
-        #     windows_listener.stop()
-        #     screen_time_obj.shutdown()
-
-        # run_tray(windows_listener, shutdown, screen_time_obj=screen_time_obj)
-
         screen_time_obj = registered_modules.get("ScreenTimeModule")
         run_tray(screen_time_obj, run_pipeline)
 

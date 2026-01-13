@@ -229,7 +229,7 @@ class ScreenTimeModule(BaseModule):
                 self._current_start = None
 
             self._save()
-        logger.info("ScreenTime module shutdown complete")
+        logger.info("ScreenTime module shutting down")
 
     
     def get(self, date):
