@@ -21,12 +21,9 @@ class JarvisTray:
     ICON_SIZE = 64
     TEXT_ICON_CHAR = "J"
 
-    def __init__(self, pipeline_func, screen_time_obj):
-        # self.backend_base = backend_base.rstrip("/")
-        # self.ui_url = ui_url
-        # self.shutdown_func = shutdown_func
-        self.pipeline_func = pipeline_func
+    def __init__(self, pipeline_runner, screen_time_obj):
         self.screen_time_obj = screen_time_obj
+        self.pipeline_runner = pipeline_runner
 
         self.healthy = False
         self.last_checked = None
@@ -37,7 +34,7 @@ class JarvisTray:
 
         self.screen_time_window = ScreenTimeWindow(screen_time_obj)
 
-        self.popup = Popup(self.app, self, self.screen_time_window, pipeline_func=pipeline_func)
+        self.popup = Popup(self.app, self, self.screen_time_window, self._run_command)
         self.popup.hide()
 
         # Tray icon
@@ -65,6 +62,10 @@ class JarvisTray:
         ).start()
 
         logger.info("Jarvis Tray started")
+
+
+    async def _run_command(self, user_input: str):
+        return await self.pipeline_runner._run(user_input)
         
     
 

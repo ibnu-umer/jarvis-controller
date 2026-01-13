@@ -91,10 +91,10 @@ class StatusStreamThread(threading.Thread):
 
 
 class Popup(QWidget):
-    def __init__(self, app, parent, screen_time_window, pipeline_func=None):
+    def __init__(self, app, parent, screen_time_window, command_runner):
         super().__init__()
         self._parent = parent
-        self.pipeline_func = pipeline_func
+        self.command_runner = command_runner
         self.screen_time_window = screen_time_window
 
         self.setWindowFlags(
@@ -289,7 +289,7 @@ class Popup(QWidget):
 
 
     async def _send_command_async(self, text):
-        plan, result = await self.pipeline_func(text)
+        plan, result = await self.command_runner(text)
 
         res = ({
             "user_input": result.context.get("user_input"),
