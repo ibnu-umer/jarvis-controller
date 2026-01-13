@@ -60,11 +60,7 @@ if __name__ == "__main__":
                 plan = planner.plan(planner_input)
                 result = await executor.execute(user_input, plan.task_graph)
 
-                if result.message:
-                    await say(result.message)
-
-                elif result.error:
-                    await say(result.error)
+                return plan, result
             
             except Exception as e:
                 traceback.print_exc()

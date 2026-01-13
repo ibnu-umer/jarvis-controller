@@ -19,6 +19,7 @@ from configs.config import WSL_BASE_URL, SCREENTIME_DATA
 
 from tray.screen_time_window import ScreenTimeWindow
 from core.logger import logger
+from core.tts import say
 
 
 # ================= CONFIG =================
@@ -288,14 +289,17 @@ class Popup(QWidget):
 
 
     async def _send_command_async(self, text):
-        await self.pipeline_func(text)
-        # try:
-        #     resp = await self._parent.backend_command_trigger(text)
-        #     self.stream_thread = StatusStreamThread(resp["command_id"])
-        #     self.stream_thread.start()
-        # except Exception as e:
-        #     logger.warning(f"Backend not reachable: {e}")
-        #     self.response.setText("Backend not reachable")
+        plan, result = await self.pipeline_func(text)
+
+        res = ({
+            "user_input": result.context.get("user_input"),
+            "parsed_intent": plan.task_graph["task_graph"]["id"],
+            "executed_actions": result.executed_nodes,
+            "message": result.message if result.message else result.error
+        })
+        self._on_state_update(res)
+        asyncio.create_task(say(res["message"]))
+ 
 
     # ---------- STATE UPDATE ----------
 

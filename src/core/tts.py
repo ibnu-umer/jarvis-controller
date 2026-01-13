@@ -35,11 +35,11 @@ def _play_audio(path: Path):
     sd.wait()
 
 
-def say_offline(text: str):
+async def say_offline(text: str):
     try:
         _offline_engine = pyttsx3.init()
-        _offline_engine.say(text)
-        _offline_engine.runAndWait()
+        await _offline_engine.say(text)
+        await _offline_engine.runAndWait()
         _offline_engine.stop()
     except Exception as e:
         logger.debug(f"PYTTSX3 Failed: {e}")
@@ -59,12 +59,13 @@ async def say(text: str):
 
     try:
         await _generate_tts(text, temp_path)
-        _play_audio(temp_path)
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, _play_audio, temp_path)
     except Exception as e:
         if not reported:
             logger.debug(f"Edge-TTS Failed: {e}")
             reported = True
-        say_offline(text)
+        await say_offline(text)
     finally:
         if temp_path.exists():
             temp_path.unlink()
