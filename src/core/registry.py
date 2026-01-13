@@ -61,6 +61,13 @@ class FileRegistry:
         return self._entries
     
 
+    def match_key(self, text):
+        for name, path in self._entries.items():
+            if name in text:
+                return name, path
+        return
+    
+
 
 class ModuleRegistry:
     def __init__(self):

@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any
 from rapidfuzz import process
 from pathlib import Path
 import os, inspect, asyncio
-from core.registry import FUNCTION_REGISTRY
+from core.registry import FUNCTION_REGISTRY, file_registry, module_registry
 
 
 
@@ -19,11 +19,6 @@ class ExecutionResult:
 
 
 class Executor:
-    def __init__(self, module_registry, file_registry):
-        # self.controller = controller_client
-        # self.state = state_provider
-        self.module_registry = module_registry
-        self.file_registry = file_registry
 
     async def execute(self, user_input: str, plan) -> ExecutionResult:
         return  await self._execute_graph(user_input, plan)
@@ -103,7 +98,7 @@ class Executor:
                         # if not func_info:
                         #     return f"Unknown action: {func_name}"
 
-                        instance = self.module_registry.get(func_info["class"])
+                        instance = module_registry.get_module(func_info["class"])
                         # if not instance:
                         #     return f"No module instance for class {func_info['class']}"
 
@@ -254,14 +249,14 @@ class Executor:
 
 
         if parent_name and not folder:
-            base = self.file_registry.get(parent_name)
+            base = file_registry.get_path(parent_name)
             if not base:
                 raise ValueError(f"No base path found for: {parent_name}")
             return str(base)
 
 
         if parent_name and folder:
-            base = self.file_registry.get(parent_name)
+            base = file_registry.get_path(parent_name)
             if not base:
                 raise ValueError(f"No base path found for: {parent_name}")
 

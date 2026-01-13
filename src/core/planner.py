@@ -6,6 +6,7 @@ from core.logger import logger
 from core.templates import TEMPLATE_REGISTRY
 from core.intent_classifier import classify_intent
 import importlib
+from core.registry import file_registry, module_registry
 
 
 
@@ -24,9 +25,7 @@ class PlannerOutput:
 
 
 class Planner:
-    def __init__(self, modules, files):
-        self.intent_parser = IntentParser(modules, files)
-
+    intent_parser = IntentParser()
 
     def plan(self, planner_input: PlannerInput):
         user_input = planner_input.user_input.lower()

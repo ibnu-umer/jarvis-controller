@@ -6,6 +6,7 @@ import joblib, re, datetime, pytz
 from core.logger import logger
 from core.intent_classifier import classify_intent, KEYWORD_VALUES, MODE_PATTERNS
 from core.templates import TEMPLATE_REGISTRY
+from core.registry import file_registry, module_registry
 
 
 
@@ -21,14 +22,6 @@ class Intent:
 class IntentParser:
     CONF_THRESHOLD = 0.3
     EXECUTABLE_SUFFIXES = {".exe", ".com", ".bat", ".cmd", ".msi"}
-
-    def __init__(self, registered_modules: dict, registered_files: dict):
-        self.modules = registered_modules
-        self.files = registered_files
-
-        # self.intent_model = joblib.load("src/models/intent_predictor_model.pkl")
-        # self.vectorizer = joblib.load("src/models/vectorizer.pkl")
-        # self.label_encoder = joblib.load("src/models/label_encoder.pkl")
 
 
     def parse_action(self, user_input: str):
@@ -47,7 +40,7 @@ class IntentParser:
             return self._handle_open(user_input)
         
         if "close" in user_input:
-            app = self._match_registry_key(user_input, app=True)
+            app, _ = self._match_registry_key(user_input, app=True)
             return Intent("close_app", params={"app_name": app})
 
         if "brightness" in user_input or "volume" in user_input:
@@ -105,16 +98,14 @@ class IntentParser:
     # ---------------- Intent Handlers ----------------
 
     def _handle_open(self, text: str, confidence: float=.5) -> Intent:
-        file_key = self._match_registry_key(text)
+        file_key, file_path = self._match_registry_key(text)
         if not file_key:
             return Intent("fallback")
 
-        path = self.files[file_key]
-
-        if path.startswith(("http://", "https://")):
+        if file_path.startswith(("http://", "https://")):
             return Intent("open_app", {"app_name": file_key}, confidence)
 
-        path = Path(path)
+        path = Path(file_path)
 
         if path.is_dir():
             return Intent("open_folder", {"folder_name": file_key}, confidence)
@@ -130,12 +121,10 @@ class IntentParser:
     # ---------------- Helpers ----------------
 
     def _match_registry_key(self, text: str, app=False) -> str | None:
-        for key, path in self.files.items():
-            if key in text:
-                if app and path.endswith(".exe"):
-                    return key
-                return key
-        return None
+        name, path = file_registry.match_key(text)
+        if app and not path.endswith(".exe"):
+            return None, None
+        return name, path
     
    
     # ---------------- ML Model ----------------
