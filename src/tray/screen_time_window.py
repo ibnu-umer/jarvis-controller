@@ -10,14 +10,9 @@ from PyQt6.QtCore import Qt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+from configs.config import SCREEN_USAGE_WIN_HEIGHT, SCREEN_USAGE_WIN_WIDTH
 
 
-
-
-def format_duration(seconds: int) -> str:
-    h = seconds // 3600
-    m = (seconds % 3600) // 60
-    return f"{h}h {m}m"
 
 
 class ScreenTimeWindow(QMainWindow):
@@ -28,8 +23,10 @@ class ScreenTimeWindow(QMainWindow):
         self.current_date = date.today()
 
         self.setWindowTitle("Screen Time Usage")
-        self.resize(900, 600)
+        self.resize(SCREEN_USAGE_WIN_HEIGHT, SCREEN_USAGE_WIN_WIDTH)
+        self._build_ui()
 
+    def _build_ui(self):
         root = QWidget()
         self.setCentralWidget(root)
         main_layout = QVBoxLayout(root)
@@ -81,6 +78,7 @@ class ScreenTimeWindow(QMainWindow):
         self.refresh()
 
     # ---------- DAY NAV ----------
+
     def prev_day(self):
         self.current_date -= timedelta(days=1)
         self.refresh()
@@ -96,7 +94,9 @@ class ScreenTimeWindow(QMainWindow):
         data = self.screen_time_obj.get(self.current_date)
         self._populate(data)
 
+
     # ---------- UI UPDATE ----------
+
     def _populate(self, app_usage: dict[str, int]):
         self.figure.clear()
         self.list_widget.clear()
@@ -127,7 +127,7 @@ class ScreenTimeWindow(QMainWindow):
 
         ax.text(
             0, 0,
-            format_duration(total_seconds),
+            self.format_duration(total_seconds),
             ha="center",
             va="center",
             fontsize=14,
@@ -154,7 +154,7 @@ class ScreenTimeWindow(QMainWindow):
             app_label = QLabel(app)
             app_label.setStyleSheet("color: white;")
 
-            time_label = QLabel(format_duration(seconds))
+            time_label = QLabel(self.format_duration(seconds))
             time_label.setStyleSheet("color: white;")
             time_label.setAlignment(Qt.AlignmentFlag.AlignRight)
 
@@ -169,3 +169,10 @@ class ScreenTimeWindow(QMainWindow):
             self.list_widget.addItem(item)
             self.list_widget.setItemWidget(item, container)
 
+    
+    # ---------- HELPERS -------------
+
+    def format_duration(seconds: int) -> str:
+        h = seconds // 3600
+        m = (seconds % 3600) // 60
+        return f"{h}h {m}m"

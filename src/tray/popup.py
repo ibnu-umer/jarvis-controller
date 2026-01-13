@@ -1,7 +1,6 @@
-import sys, time, threading, requests, asyncio, json
+import asyncio
 
 from PyQt6.QtWidgets import (
-    QApplication,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
@@ -12,81 +11,13 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QProgressBar,
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QObject
-from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtCore import Qt
-from configs.config import WSL_BASE_URL, SCREENTIME_DATA
+from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt
 
-from tray.screen_time_window import ScreenTimeWindow
-from core.logger import logger
+from configs.config import WINDOW_WIDTH, WINDOW_HEIGHT
 from core.tts import TTS
 
-
-# ================= CONFIG =================
-
-STATUS_STREAM_ENDPOINT = "/status/stream"
-COMMAND_ENDPOINT = "/command"
-
-WINDOW_WIDTH = 320
-WINDOW_HEIGHT = 260
-
-# =========================================
-
-
-class UIState(QObject):
-    updated = pyqtSignal(dict)
-
-    def update(self, payload: dict):
-        self.updated.emit(payload)
-
-
-ui_state = UIState()
-
-
-class StatusStreamThread(threading.Thread):
-    daemon = True
-
-    def __init__(self, command_id: str):
-        super().__init__()
-        self.command_id = command_id
-        self._stop_event = threading.Event()
-
-
-    def stop(self):
-        self._stop_event.set()
-
-
-    def run(self):
-        url = f"{WSL_BASE_URL}/status/stream/{self.command_id}"
-
-        while not self._stop_event.is_set():
-            try:
-                with requests.get(url, stream=True, timeout=(5, None)) as r:
-                    r.raise_for_status()
-
-                    for line in r.iter_lines():
-                        if self._stop_event.is_set():
-                            return
-
-                        if not line:
-                            continue
-
-                        self.handle_event(line)
-
-                return
-
-            except requests.RequestException:
-                if self._stop_event.is_set():
-                    return
-                time.sleep(5)  
-
-
-    def handle_event(self, raw_line: bytes):
-        try:
-            payload = json.loads(raw_line.decode())
-            ui_state.update(payload)
-        except Exception:
-            pass
 
 
 
@@ -108,9 +39,8 @@ class Popup(QWidget):
         self._build_ui()
         self._set_style()
 
-        self.adjustSize()
+        self.setFixedSize(WINDOW_WIDTH, WINDOW_HEIGHT)
         self._move_to_corner(app)
-        ui_state.updated.connect(self._on_state_update)
 
 
     # ---------- UI ----------
@@ -129,7 +59,7 @@ class Popup(QWidget):
 
         self.input = QLineEdit()
         self.input.setPlaceholderText("Type a command…")
-        self.input.returnPressed.connect(self._send_command)
+        self.input.returnPressed.connect(self._run_command)
 
         self.response = QLabel("")
         response_font = QFont()
@@ -139,7 +69,7 @@ class Popup(QWidget):
 
         screen_usage_btn = QPushButton("U")
         screen_usage_btn.setFixedWidth(30)
-        screen_usage_btn.clicked.connect(self._show_screen_usage)
+        screen_usage_btn.clicked.connect(self.screen_time_window.show)
 
         info_row = QHBoxLayout()
         info_row.addWidget(self.response)
@@ -149,7 +79,7 @@ class Popup(QWidget):
 
         send_btn = QPushButton(">")
         send_btn.setFixedWidth(30)
-        send_btn.clicked.connect(self._send_command)
+        send_btn.clicked.connect(self._run_command)
 
         close_btn = QPushButton("X")
         close_btn.setFixedWidth(30)
@@ -163,7 +93,6 @@ class Popup(QWidget):
         layout.addLayout(input_row)
         layout.addLayout(info_row)
         layout.addWidget(self.task_list)
-
 
     def create_task_item(self, item: QListWidgetItem, user_input: str, actions: list[str], success: bool, message: str=""):
         container = QWidget()
@@ -237,7 +166,6 @@ class Popup(QWidget):
 
         return container
 
-
     def _set_style(self):
         self.setStyleSheet("""
             QWidget#main {
@@ -255,7 +183,6 @@ class Popup(QWidget):
             }
         """)
 
-
     def _move_to_corner(self, app):
         screen = app.primaryScreen().availableGeometry()
         self.move(
@@ -270,26 +197,21 @@ class Popup(QWidget):
         if event.key() == Qt.Key.Key_Escape:
             self.hide()
 
-
     def toggle(self):
-        if self.isVisible():
-            self.hide()
-        else:
-            self.show()
+        self.hide() if self.isVisible() else self.show()
 
 
-    # ---------- NETWORK ----------
+    # ---------- COMMANDS HANDLING ------------
 
-    def _send_command(self):
+    def _run_command(self):
         text = self.input.text().strip()
         if not text:
             return
 
         self.input.clear()
-        asyncio.create_task(self._send_command_async(text))
+        asyncio.create_task(self._run_command_async(text))
 
-
-    async def _send_command_async(self, text):
+    async def _run_command_async(self, text):
         plan, result = await self.command_runner(text)
 
         res = ({
@@ -324,7 +246,6 @@ class Popup(QWidget):
         self.task_list.scrollToBottom()
 
 
-
     def _task_widget(self, task: dict):
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -342,10 +263,4 @@ class Popup(QWidget):
         layout.addWidget(label)
         layout.addWidget(bar)
         return container
-
-
-    def _show_screen_usage(self):
-        self.screen_time_window.show()
-
- 
 

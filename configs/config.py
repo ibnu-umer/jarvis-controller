@@ -36,3 +36,14 @@ LOG_LEVEL = logging.INFO
 
 ICON_PATH = get_resource_path("assets/app.ico")
 OFFLINE_ICON_PATH = get_resource_path("assets/app_offline.ico")
+
+
+
+
+# UI CONFIGS
+WINDOW_HEIGHT = 260
+WINDOW_WIDTH = 320
+ICON_SIZE = 64
+
+SCREEN_USAGE_WIN_WIDTH = 500 
+SCREEN_USAGE_WIN_HEIGHT = 400
