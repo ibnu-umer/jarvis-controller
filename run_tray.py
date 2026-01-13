@@ -8,7 +8,7 @@ if SRC_PATH not in sys.path:
     sys.path.insert(0, SRC_PATH)
 
 try:
-    from tray.tray_app import JarvisTray
+    from tray.app import JarvisTray
     from core.logger import logger
     from core.pipeline import PipeLineRunner
     from core.registry import module_registry
