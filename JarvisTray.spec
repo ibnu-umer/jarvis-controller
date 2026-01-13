@@ -16,7 +16,8 @@ a = Analysis(
     ],
     hiddenimports=hidden_mods + [
         'pytz', 'psutil', 'pythoncom', 'win32gui', 'win32process',
-        'win32com', 'PIL.ImageGrab', 'send2trash', 'pyperclip'
+        'win32com', 'PIL.ImageGrab', 'send2trash', 'pyperclip', 
+        'watchdog', 'watchdog.observers', 'watchdog.events'
     ],
     hookspath=[],
     hooksconfig={},

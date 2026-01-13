@@ -1,7 +1,7 @@
 import subprocess, pytz, psutil, pyperclip
 from core.registry import action
 from core.base_module import BaseModule
-from src.tray.app import JarvisTray
+from tray.app import JarvisTray
 from datetime import datetime
 from pathlib import Path
 
