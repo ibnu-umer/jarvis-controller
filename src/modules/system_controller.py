@@ -2,7 +2,7 @@ import subprocess, pytz, psutil, pyperclip
 from core.registry import action
 from core.base_module import BaseModule
 from tray.app import JarvisTray
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 
@@ -16,42 +16,42 @@ class SystemController(BaseModule):
 
     @action(name="shutdown")
     def shutdown(self):
-        if JarvisTray.confirm_with_popup("Shutdown in 5 seconds?", "Confirm Shutdown"):
+        if JarvisTray.confirm_with_popup("Are you sure you want to shutdown?", "Confirm Shutdown"):
             self._run("shutdown /s /t 0")
             return self.success("Shutting down")
-        return self.success("Cancelled")
+        return self.success("Shutdown Cancelled")
     
 
     @action(name="restart")
     def restart(self):
-        if JarvisTray.confirm_with_popup("Restart in 5 seconds?", "Confirm Restart"):
+        if JarvisTray.confirm_with_popup("Are you sure you want to restart?", "Confirm Restart"):
             self._run("shutdown /r /t 0")
             return self.success("Restarting")
-        return self.success("Cancelled")
+        return self.success("Restart Cancelled")
     
 
     @action(name="logout")
     def logout(self):
-        if JarvisTray.confirm_with_popup("Logout in 5 seconds?", "Confirm Logout"):
+        if JarvisTray.confirm_with_popup("Are you sure you want to logout?", "Confirm Logout"):
             self._run("shutdown /l")
             return self.success("Logging out")
-        return self.success("Cancelled")
+        return self.success("Logout Cancelled")
     
 
     @action(name="sleep")
     def sleep(self):
-        if JarvisTray.confirm_with_popup("Sleep in 5 seconds?", "Confirm Sleep"):
+        if JarvisTray.confirm_with_popup("Are you sure you want to sleep?", "Confirm Sleep"):
             self._run("powershell -command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState('Suspend', $false, $false)\"")
             return self.success("Sleeping")
-        return self.success("Cancelled")
+        return self.success("Sleep Cancelled")
     
 
     @action(name="lock")
     def lock(self):
-        if JarvisTray.confirm_with_popup("Lock in 5 seconds?", "Confirm Lock?"):
+        if JarvisTray.confirm_with_popup("Are you sure you want to lock?", "Confirm Lock?"):
             self._run("rundll32.exe user32.dll,LockWorkStation")
             return self.success("Locked")
-        return self.success("cancelled")
+        return self.success("Lock cancelled")
     
 
     @action(name="brightness", params={"value", "mode"})
@@ -94,36 +94,47 @@ class SystemController(BaseModule):
         return self.success(f"Volume set to {value}%")
     
 
-    @action(name="get_datetime", params={"result"})
-    def get_datetime(self, result):
+    @action(name="get_datetime", params={"get", "day"})
+    def get_datetime(self, get, day="today"):
         tz = pytz.timezone("Asia/Kolkata")
         now = datetime.now(tz)
-        date, time = now.strftime("%A, %d %B %Y"), now.strftime("%I:%M %p")
+        if day == "yesterday":
+            target = now - timedelta(days=1)
+        elif day == "tomorrow":
+            target = now + timedelta(days=1)
+        else:
+            target = now
+
+        date_str = target.strftime("%A, %d %B %Y")
+        time_str = target.strftime("%I:%M %p")
+        day_str = target.strftime("%A")
 
         messages = {
-            "time": f"The time is {time}",
-            "date": f"Today is {date}",
+            "time": f"The time is {time_str}",
+            "date": f"{day} is {date_str}",
+            "day": f"Its {day_str}"
         }
         
-        if result not in messages:
-            return self.failure("Invalid result value")
+        if get not in messages:
+            return self.failure("Invalid get value")
         
         return self.success(
-            messages.get(result),
-            data={"time": str(time), "date": str(date)}
+            messages.get(get)
         )
     
 
-    @action(name="get_battery_status", params={"result"})
-    def get_battery_status(self, result):
+    @action(name="get_battery_status", params={"get"})
+    def get_battery_status(self, get):
         battery = psutil.sensors_battery()
+        percent, plugged = battery.percent, battery.power_plugged
         messages = {
-            "level": f"its {battery.percent}%",
-            "plugged": "yes it is plugged" if battery.power_plugged else "Not plugged"
+            "level": f"its {percent}%",
+            "plugged": "yes it is plugged" if plugged else "Not plugged",
+            "status": f"{percent}% battery level and {"" if plugged else "not"} charging"
         }
         return self.success(
-            messages.get(result),
-            data={"percent": battery.percent, "plugged": battery.power_plugged}
+            messages.get(get),
+            data={"percent": percent, "plugged": plugged}
         )
     
 
