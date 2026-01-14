@@ -17,6 +17,7 @@ from PyQt6.QtCore import Qt
 
 from configs.config import WINDOW_WIDTH, WINDOW_HEIGHT
 from core.tts import TTS
+from core.logger import logger
 
 
 
@@ -220,6 +221,8 @@ class Popup(QWidget):
             "executed_actions": result.executed_nodes,
             "message": result.message if result.message else result.error
         })
+        
+        logger.info(res)
         self._on_state_update(res)
         asyncio.create_task(self.tts.say(res["message"]))
  
