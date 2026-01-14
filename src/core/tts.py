@@ -29,20 +29,19 @@ class TTS:
         sd.play(data, samplerate)
         sd.wait()
 
-    async def _say_offline(self, text: str):
+    def _say_offline(self, text: str):
         try:
             _offline_engine = pyttsx3.init()
-            await _offline_engine.say(text)
-            await _offline_engine.runAndWait()
+            _offline_engine.say(text)
+            _offline_engine.runAndWait()
             _offline_engine.stop()
         except Exception as e:
-            logger.debug(f"PYTTSX3 Failed: {e}")
+            logger.error(f"PYTTSX3 Failed: {e}")
 
     async def say(self, text: str):
         """
         Generate TTS, play it, and clean up temp audio.
         """
-        global reported
 
         with tempfile.NamedTemporaryFile(
             suffix=".wav",
@@ -55,10 +54,10 @@ class TTS:
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(None, self._play_audio, temp_path)
         except Exception as e:
-            if not reported:
-                logger.debug(f"Edge-TTS Failed: {e}")
-                reported = True
-            await self._say_offline(text)
+            if not self.reported:
+                logger.error(f"Edge-TTS Failed: {e}")
+                self.reported = True
+            self._say_offline(text)
         finally:
             if temp_path.exists():
                 temp_path.unlink()
