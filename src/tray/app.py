@@ -23,7 +23,7 @@ class JarvisTray:
         self.pipeline_runner = pipeline_runner
 
         self.app = QApplication(sys.argv)
-        self.app.setWindowIcon(QIcon(ICON_PATH))
+        self.app.setWindowIcon(QIcon(str(ICON_PATH)))
         self.app.setQuitOnLastWindowClosed(False)
 
         self.screen_time_window = ScreenTimeWindow(screen_time_obj)
@@ -32,7 +32,7 @@ class JarvisTray:
         self.popup.hide()
 
         # Tray icon
-        self.tray_icon = QSystemTrayIcon(QIcon(ICON_PATH), self.app)
+        self.tray_icon = QSystemTrayIcon(QIcon(str(ICON_PATH)), self.app)
         self.tray_icon.setToolTip("Jarvis")
 
         # Tray menu

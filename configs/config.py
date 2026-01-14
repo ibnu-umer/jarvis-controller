@@ -1,5 +1,5 @@
 import os, sys, logging
-
+from pathlib import Path
 
 
 
@@ -15,14 +15,25 @@ WIN_BASE_URL = f"http://{WIN_HOST}:{WIN_PORT}"
 WSL_CONNECT_HOST = "172.29.130.227"
 WSL_BASE_URL = f"http://{WSL_CONNECT_HOST}:6000"
 
-def get_resource_path(relative):
-    if hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, f"configs/{relative}")
-    return os.path.join(os.path.dirname(__file__), relative)
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOG_FILE = "logs/app.log"
 
+IS_FROZEN = getattr(sys, "frozen", False)
+
+# Base directory where the app lives (exe dir or project root)
+APP_DIR = Path(sys.executable).parent if IS_FROZEN else Path(__file__).resolve().parents[1]
+
+# Base directory for bundled resources (MEIPASS or project root)
+RESOURCE_DIR = Path(sys._MEIPASS) if IS_FROZEN else APP_DIR
+
+# Ensure predictable working directory (important for startup)
+os.chdir(APP_DIR)
+
+
+def get_resource_path(relative: str) -> Path:
+    """Return absolute path to a bundled resource."""
+    return RESOURCE_DIR / "configs" / relative
+
+LOG_FILE = APP_DIR / "logs" / "app.log"
 FILE_REGISTRY_PATH = get_resource_path("file_registry.json")
 PROCESS_NAMES_PATH = get_resource_path("process_names.json")
 SCREENSHOTS_FOLDER = "data/screenshots"
