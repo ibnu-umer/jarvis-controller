@@ -2,7 +2,9 @@ import re
 
 
 AFTER_PATTERN = re.compile(
-    r"\bafter\s+(?P<value>\d+)\s*(?P<unit>minute|minutes|hour|hours)\b",
+    r"\bafter\s+"
+    r"(?:(?P<hours>\d+)\s*(?:hour|hours))?\s*"
+    r"(?:(?P<minutes>\d+)\s*(?:minute|minutes))?\b",
     re.IGNORECASE
 )
 

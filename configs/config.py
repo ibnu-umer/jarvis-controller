@@ -47,7 +47,7 @@ LOG_LEVEL = logging.INFO
 
 ICON_PATH = get_resource_path("assets/app.ico")
 OFFLINE_ICON_PATH = get_resource_path("assets/app_offline.ico")
-
+REMINDERS_PATH = get_resource_path("reminders.json")
 
 
 

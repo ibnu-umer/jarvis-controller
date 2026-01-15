@@ -21,8 +21,9 @@ def main():
     try:
         pipeline_runner = PipeLineRunner()
         screen_time_obj = module_registry.get_module("ScreenTimeModule")
+        reminder_obj = module_registry.get_module("Reminder")
 
-        tray = JarvisTray(pipeline_runner, screen_time_obj)
+        tray = JarvisTray(pipeline_runner, screen_time_obj, reminder_obj)
         loop = QEventLoop(tray.app)
         asyncio.set_event_loop(loop)
 

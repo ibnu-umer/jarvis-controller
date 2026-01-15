@@ -86,8 +86,8 @@ class IntentParser:
 
             if pred_intent == "reminder":
                 when = self.extract_when(user_input)
-                # return Intent("reminder", params=when)
-                return Intent("fallback")
+                if when:
+                    return Intent("set_reminder", params={"user_input": user_input, "when_data": when})
 
         return Intent("fallback")
 
@@ -133,7 +133,7 @@ class IntentParser:
     
 
     def parse_reminder(self, user_input: str):
-        return Intent("reminder")
+        return Intent("set_reminder", params={"user_input": user_input})
 
 
     # ---------------- Intent Handlers ----------------
@@ -184,10 +184,11 @@ class IntentParser:
                         continue  # invalid time → ignore match
 
             # ---- validation for relative duration ----
-            if kind == "after":
-                value = int(args.get("value", 0))
-                if value <= 0:
-                    continue
+            # if kind == "after":
+            #     print(match)
+            #     value = int(args.get("value", 0))
+            #     if value <= 0:
+            #         continue
 
             return {
                 "type": kind,
