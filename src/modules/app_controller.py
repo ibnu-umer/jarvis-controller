@@ -47,12 +47,12 @@ class AppController(BaseModule):
             if app_path.startswith(("http://", "https://")):
                 browser_path = self.file_registry.get_path(browser)
                 webbrowser.get(f'"{browser_path}" %s').open(app_path)
-                return self.success(f"Opened URL: {app_path}")
+                return self.success(f"Opened {app_name}")
 
             # ms-settings and similar URIs
             if app_path.startswith("ms-"):
                 subprocess.run(f'start "" "{app_path}"', shell=True)
-                return self.success(f"Opened Windows URI: {app_path}")
+                return self.success(f"Opened {app_name}")
 
             launch_windows_app(app_path, folder_path)
             return self.success(f"opened {app_name if app_name else "App"}")
@@ -65,7 +65,7 @@ class AppController(BaseModule):
     def open_focus_app(self, app_name: str = None, query: str = None, folder_path: str = None, folder_name: str = None):
         res = self.focus_app(app_name=app_name, query=query)
         if res["success"]:
-            return self.success(f"{app_name} with {query} window focused")
+            return res
 
         return self.open_app(app_name)
 
@@ -135,15 +135,18 @@ class AppController(BaseModule):
 
     @action(name="focus_app", params={"app_name", "query", "instance"})
     def focus_app(self, app_name: str, query: str = None, instance: dict = None):
-        if instance:
-            hwnd = instance["hwnd"]
-            resolved_title = instance["title"]
+        # -------- resolve target window --------
+        hwnd = None
+        resolved_title = None
 
+        if instance:
+            hwnd = instance.get("hwnd")
+            resolved_title = instance.get("title")
         else:
             process_name = self.process_names.get(app_name, app_name).lower()
+
             windows = self._get_windows_by_process_and_title(process_name)
 
-            # Fallback to ApplicationFrameHost
             if not windows:
                 windows = self._get_windows_by_process_and_title(
                     "applicationframehost", process_name
@@ -152,35 +155,50 @@ class AppController(BaseModule):
             if not windows:
                 return self.failure(f"No visible window found for {process_name}")
 
-            # Resolve the target window handle
-            hwnd, resolved_title = None, None
             if query:
                 for w in windows:
-                    if query in w["title"]:
+                    if query.lower() in w["title"].lower():
                         hwnd = w["hwnd"]
                         resolved_title = w["title"]
                         break
-                if hwnd is None:
+                if not hwnd:
                     return self.failure(f"No window found with title containing '{query}'")
+            else:
+                # default: first visible window
+                hwnd = windows[0]["hwnd"]
+                resolved_title = windows[0]["title"]
+                app_name = resolved_title.split("-")[-1]
 
+        # -------- validate hwnd --------
+        if not hwnd or not win32gui.IsWindow(hwnd):
+            return self.failure("Invalid or closed window handle")
 
         try:
+            # Restore if minimized
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
 
-            fg = win32gui.GetForegroundWindow()
-            fg_thread, _ = win32process.GetWindowThreadProcessId(fg)
+            fg_hwnd = win32gui.GetForegroundWindow()
+            fg_thread, _ = win32process.GetWindowThreadProcessId(fg_hwnd)
             target_thread, _ = win32process.GetWindowThreadProcessId(hwnd)
 
-            if fg_thread != target_thread:
+            # Attach only if required and valid
+            if fg_thread and target_thread and fg_thread != target_thread:
                 win32process.AttachThreadInput(fg_thread, target_thread, True)
-                win32gui.SetForegroundWindow(hwnd)
-                win32process.AttachThreadInput(fg_thread, target_thread, False)
-            else:
-                win32gui.SetForegroundWindow(hwnd)
 
-            return self.success(f"Focused {resolved_title}", data={"hwnd": hwnd})
+            win32gui.SetForegroundWindow(hwnd)
+
+            if fg_thread and target_thread and fg_thread != target_thread:
+                win32process.AttachThreadInput(fg_thread, target_thread, False)
+
+            return self.success(
+                f"Focused {app_name}",
+                data={"hwnd": hwnd, "title": resolved_title},
+            )
+
         except Exception as e:
+            # self.logger.exception("Window focus failed")
             return self.failure(f"Failed to focus window")
+
 
 
     @action(name="minimize_app", params={"app_name"})
