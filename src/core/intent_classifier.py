@@ -115,6 +115,28 @@ def classify_intent(text: str) -> IntentType:
     return IntentType.SEARCH
 
 
+import joblib
+import numpy as np
+
+class IntentClassifier:
+    def __init__(self):
+        self.intent_model = joblib.load("models/intent_predictor_model.pkl")
+        self.vectorizer = joblib.load("models/vectorizer.pkl")
+        self.label_encoder = joblib.load("models/label_encoder.pkl")
+
+
+    def predict_intent(self, text: str):
+        X = self.vectorizer.transform([text])
+        scores = self.intent_model.decision_function(X)[0]    
+        pred_idx = scores.argmax()
+        pred_label = self.label_encoder.inverse_transform([pred_idx])[0]
+        confidence = 1 / (1 + np.exp(-scores[pred_idx]))
+
+        return pred_label, float(confidence)
+    
+             
+
+
 
 
 
