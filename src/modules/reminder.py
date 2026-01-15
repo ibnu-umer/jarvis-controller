@@ -1,5 +1,5 @@
 import json
-import uuid
+import uuid, re
 import time
 import threading
 from datetime import datetime, timedelta
@@ -101,12 +101,27 @@ class Reminder(BaseModule):
             return target, display_time
 
         raise ValueError(f"Unsupported reminder type: {kind}")
+    
+
+    def resolve_message(self, user_input, when_str):
+        REMIND_MESSAGE_PATTERN = re.compile(
+            r"""
+            (?:remind\s+me\s+(?:to\s+)?)   # remind me / remind me to
+            (?P<message>.*?)               # capture message lazily
+            (?=\s+(?:at|after)\b|$)        # stop before time part or end
+            """,
+            re.IGNORECASE | re.VERBOSE
+        )
+        m = REMIND_MESSAGE_PATTERN.search(user_input)
+        if not m:
+            return f"its {when_str}, you told me to remind you"
+        return f"its {when_str}, you told me to remind you to {m.group("message").strip()}"
 
 
     @action("set_reminder", params={"user_input", "when_data"})
     def set_reminder(self, user_input: str, when_data: dict):
         when, when_string = self.resolve_when(when_data)
-        message = "Sir its time"
+        message = self.resolve_message(user_input, when_string)
         self.add_reminder(message, when)
         return self.success(f"reminder set at {when_string}")
 
