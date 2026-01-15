@@ -224,7 +224,7 @@ class Popup(QWidget):
         
         logger.info(res)
         self._on_state_update(res)
-        asyncio.create_task(self.tts.say(res["message"]))
+        await self.tts.say(res["message"])
  
 
     # ---------- STATE UPDATE ----------

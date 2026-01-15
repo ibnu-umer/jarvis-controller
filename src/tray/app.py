@@ -1,4 +1,4 @@
-import sys, time, webbrowser, requests
+import sys, time, webbrowser, requests, asyncio
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QMessageBox
 from PyQt6.QtGui import QIcon, QAction
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -18,9 +18,10 @@ class HotkeyBridge(QObject):
 
 class JarvisTray:
 
-    def __init__(self, pipeline_runner, screen_time_obj):
-        self.screen_time_obj = screen_time_obj
+    def __init__(self, pipeline_runner, screen_time_obj, reminder_obj):
         self.pipeline_runner = pipeline_runner
+        self.screen_time_obj = screen_time_obj
+        self.reminder_obj = reminder_obj
 
         self.app = QApplication(sys.argv)
         self.app.setWindowIcon(QIcon(str(ICON_PATH)))
@@ -50,7 +51,20 @@ class JarvisTray:
             daemon=True
         ).start()
 
+        self.loop = asyncio.new_event_loop()
+        threading.Thread(
+            target=self._start_async_loop,
+            daemon=True
+        ).start()
+
+        self.reminder_obj.set_trigger(self.reminder_trigger)
+
         logger.info("Jarvis Tray started")
+
+
+    def _start_async_loop(self):
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_forever()
 
     async def _run_command(self, user_input: str):
         return await self.pipeline_runner._run(user_input)
@@ -106,6 +120,7 @@ class JarvisTray:
             return
 
         self.screen_time_obj.shutdown()
+        self.reminder_obj.shutdown()
         self.popup.close()
         self.tray_icon.hide()
         self.app.quit()
@@ -113,3 +128,12 @@ class JarvisTray:
 
     def run(self):
         sys.exit(self.app.exec())
+
+
+    def reminder_trigger(self, result):
+        message = result["message"]
+        logger.info(f"REMINDER: {message}")
+        asyncio.run_coroutine_threadsafe(
+            self.popup.tts.say(message),
+            self.loop
+        )

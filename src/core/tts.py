@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, time
 import tempfile
 from pathlib import Path
 import edge_tts, pyttsx3
@@ -32,6 +32,7 @@ class TTS:
     def _say_offline(self, text: str):
         try:
             _offline_engine = pyttsx3.init()
+            _offline_engine.setProperty("rate", 200) 
             _offline_engine.say(text)
             _offline_engine.runAndWait()
             _offline_engine.stop()
@@ -42,7 +43,9 @@ class TTS:
         """
         Generate TTS, play it, and clean up temp audio.
         """
-
+        then = time.time()
+        logger.info(f"Generating audio: {then}")
+        
         with tempfile.NamedTemporaryFile(
             suffix=".wav",
             delete=False
@@ -61,4 +64,6 @@ class TTS:
         finally:
             if temp_path.exists():
                 temp_path.unlink()
+
+        logger.info(f"Audio generated and said: {time.time()}, Time Taken: {time.time() - then}")
 
