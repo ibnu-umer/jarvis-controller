@@ -183,13 +183,6 @@ class IntentParser:
                     if not (0 <= hour <= 23 and 0 <= minute <= 59):
                         continue  # invalid time → ignore match
 
-            # ---- validation for relative duration ----
-            # if kind == "after":
-            #     print(match)
-            #     value = int(args.get("value", 0))
-            #     if value <= 0:
-            #         continue
-
             return {
                 "type": kind,
                 "raw": match.group(0),
