@@ -180,7 +180,8 @@ class SystemController(BaseModule):
         if _as == "path":
             path_obj = Path(copied)
             if not path_obj.exists():
-                return self.failure(f"Path does not exist: {copied}")
+                
+                return self.failure(f"Path does not exist: {copied[:10]}...")
 
             if path_obj.is_file():
                 return self.success("Clipboard value as path", data={

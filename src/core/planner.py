@@ -1,9 +1,9 @@
 from core.intent_parser import IntentParser, Intent
-from core import templates
+from src.templates import templates
 from dataclasses import dataclass
 from typing import Dict, Any
 from core.logger import logger
-from core.templates import TEMPLATE_REGISTRY
+from src.templates.template_registry import TEMPLATE_REGISTRY
 from core.intent_classifier import classify_intent, IntentClassifier
 import importlib
 from core.registry import file_registry, module_registry, FUNCTION_REGISTRY
@@ -32,8 +32,11 @@ class Planner:
         user_input = planner_input.user_input.lower()
         
         intent = self.intent_parser.parse_intent(user_input)
-        serialized = self.serialize_intent(intent)
-        return PlannerOutput(serialized)
+
+        if isinstance(intent, Intent):
+            intent = self.serialize_intent(intent)
+
+        return PlannerOutput(intent)
         
             
         # if ml failed, then check for patterns
@@ -95,6 +98,9 @@ class Planner:
             }
         }
     
+
+    #! serialize template
+
 
     def get_fallback_graph(self, reason):
         return PlannerOutput({

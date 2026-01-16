@@ -222,7 +222,7 @@ class Popup(QWidget):
             "message": result.message if result.message else result.error
         })
         
-        logger.info(res)
+        logger.info(f"[POPUP RESULT] {res}")
         self._on_state_update(res)
         await self.tts.say(res["message"])
  

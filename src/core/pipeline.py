@@ -17,7 +17,10 @@ class PipeLineRunner:
             )
             
             plan = self.planner.plan(planner_input)
+            logger.info(f"PLAN {str(plan)}")
+
             result = await self.executor.execute(user_input, plan.task_graph)
+            logger.info(f"RESULT {str(result)}")
 
             return plan, result
         

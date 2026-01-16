@@ -1,11 +1,11 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, Tuple
 from pathlib import Path
-import joblib, re, datetime, pytz, numpy
+import joblib, re, datetime, pytz, numpy, importlib
 
 from core.logger import logger
 from core.intent_classifier import classify_intent, KEYWORD_VALUES, MODE_PATTERNS, IntentClassifier
-from core.templates import TEMPLATE_REGISTRY
+from src.templates.template_registry import TEMPLATE_REGISTRY, score_template
 from core.registry import file_registry, module_registry
 from core.patterns import WHEN_PATTERNS
 
@@ -29,7 +29,32 @@ class IntentParser:
     label_encoder = joblib.load("models/label_encoder.pkl")
 
 
+
+
+
     def parse_intent(self, user_input: str):
+        template, info = self.find_template(user_input)
+        
+        if not template:
+            action = self.find_action(user_input)
+            return action
+        
+        template_graph = self.get_template_graph(info)
+        return template_graph
+
+
+    def find_template(self, user_input):
+        for temp, info in TEMPLATE_REGISTRY.items():
+            keyword = info["requires"]
+          
+            if all(k in user_input for k in keyword):
+                return temp, info
+            
+        return None, None
+
+
+
+    def find_action(self, user_input: str):
         pred_intent, conf = self.predict_intent(user_input)
         logger.info(f"Predicted: {pred_intent} | Confidence: {int(conf*100)}")
 
@@ -192,6 +217,17 @@ class IntentParser:
         return None
 
 
+    def get_template_graph(self, info):
+        module_name = info["module"]
+        func_name = info["function"]
+
+        try:
+            module = importlib.import_module(module_name)
+            func = getattr(module, func_name)
+            return func()
+        
+        except Exception as e:
+            logger.error(f"Error while fetching template: {e}")
 
 
     # ---------------- Helpers ----------------

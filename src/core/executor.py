@@ -50,7 +50,8 @@ class Executor:
 
                 # --- NOOP ---
                 if node_type == "noop":
-                    return self._success(tg["id"], executed, context)
+                    message = node.get("message") or context.get("message")
+                    return self._success(tg["id"], executed, context, message)
 
                 # --- ABORT ---
                 if node_type == "abort":
@@ -71,8 +72,6 @@ class Executor:
                 # --- ACTION ---
                 if node_type == "action":
                     retries = node.get("retries", 0)
-                    output_key = node.get("output")
-                    fetch = node.get("fetch", None)
 
                     resolved_args = self._resolve_args(
                         node.get("args", {}),
@@ -90,16 +89,17 @@ class Executor:
                             result = asyncio.run(action_func(**resolved_args))
                         else:
                             result = action_func(**resolved_args)
-                    
+
                         if result.get("success"):
-                            if output_key:
-                                data = result["data"].get(fetch) if fetch else result.get("data")
-                                context[output_key] = data
+                            data = result.get("data", None)
+                            if data:
+                                context.update(data)
+
                             context["message"] = result.get("message")
                             current = node["on_success"]
                             break
                         else:
-                            last_error = response.get("error")
+                            last_error = result.get("error")
 
                     else:
                         current = node["on_failure"]
@@ -167,9 +167,6 @@ class Executor:
         path = ref[1:].split("::")
         value = context.get(path[0])
 
-        if value is None:
-            raise RuntimeError(f"Context value not found: {path[0]}")
-
         for part in path[1:]:
             if isinstance(value, dict):
                 value = value.get(part)
@@ -178,13 +175,13 @@ class Executor:
 
         return value
 
-    def _success(self, graph_id, executed, context):
+    def _success(self, graph_id, executed, context, message):
         return ExecutionResult(
             graph_id=graph_id,
             status="success",
             executed_nodes=executed,
             failed_node=None,
-            message=context["message"],
+            message=message,
             error=None,
             context=context
         )
