@@ -139,7 +139,10 @@ class ScreenTimeModule(BaseModule):
                 idle = self._get_idle_seconds()
                 now = time.time()
    
-                if idle >= self._idle_timeout_seconds and self._current_app not in ("vlc.exe"):
+                if idle >= self._idle_timeout_seconds and self._current_app:
+                    if self._current_app in ("vlc.exe"):
+                        continue
+
                     if self._current_app and self._current_start:
                         elapsed = now - self._current_start
                         self._add_seconds(self._current_app, elapsed)
