@@ -38,6 +38,7 @@ FILE_REGISTRY_PATH = get_resource_path("file_registry.json")
 PROCESS_NAMES_PATH = get_resource_path("process_names.json")
 SCREENSHOTS_FOLDER = "data/screenshots"
 SCREENTIME_DATA = "data/screentime.json"
+REMINDERS_PATH = "data/reminders.json"
 
 SCREENTIME_TIMEOUT = 60
 SCREENTIME_POLL_INTERVAL = 1.0
@@ -47,7 +48,6 @@ LOG_LEVEL = logging.INFO
 
 ICON_PATH = get_resource_path("assets/app.ico")
 OFFLINE_ICON_PATH = get_resource_path("assets/app_offline.ico")
-REMINDERS_PATH = get_resource_path("reminders.json")
 
 
 

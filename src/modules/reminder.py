@@ -14,12 +14,12 @@ from core.logger import logger
 
 class Reminder(BaseModule):
     def __init__(self):
-        self.path = REMINDERS_PATH
+        self.path = Path("data/reminders.json")
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.trigger = None
 
         if not self.path.exists():
-            self.path.write_text("[]")
+            self.path.write_text("[]", encoding="utf-8")
 
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._lock = threading.RLock()
@@ -36,9 +36,10 @@ class Reminder(BaseModule):
     @action("load_reminders")
     def load_reminders(self):
         with self._lock:
-            text = self.path.read_text().strip()
+            text = self.path.read_text(encoding="utf-8").strip()
             if not text:
                 return []
+
             return json.loads(text)
 
 
@@ -115,7 +116,9 @@ class Reminder(BaseModule):
         m = REMIND_MESSAGE_PATTERN.search(user_input)
         if not m:
             return f"its {when_str}, you told me to remind you"
-        return f"its {when_str}, you told me to remind you to {m.group("message").strip()}"
+        
+        message = m.group("message").strip()
+        return f"its {when_str}, you told me to remind you {"to" + message if message else ""}"
 
 
     @action("set_reminder", params={"user_input", "when_data"})
