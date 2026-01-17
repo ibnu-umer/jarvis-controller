@@ -7,6 +7,7 @@ from configs.config import ICON_PATH
 from core.logger import logger
 from tray.popup import Popup 
 from tray.screen_time_window import ScreenTimeWindow
+from tray.template_window import TemplateEditorWindow
 import keyboard, threading, httpx
 
 
@@ -28,8 +29,12 @@ class JarvisTray:
         self.app.setQuitOnLastWindowClosed(False)
 
         self.screen_time_window = ScreenTimeWindow(screen_time_obj)
+        self.template_window = TemplateEditorWindow()
 
-        self.popup = Popup(self.app, self, self.screen_time_window, self._run_command)
+        self.popup = Popup(
+            self.app, self, self.screen_time_window, 
+            self.template_window, self._run_command
+        )
         self.popup.hide()
 
         # Tray icon
