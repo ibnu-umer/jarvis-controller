@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 import inspect, asyncio
 from core.registry import FUNCTION_REGISTRY, module_registry
+from tray.app import JarvisTray
 
 
 
@@ -72,6 +73,11 @@ class Executor:
                 # --- ACTION ---
                 if node_type == "action":
                     retries = node.get("retries", 0)
+                 
+                    if node["confirm"] and not JarvisTray.confirm_with_popup(f"confirm {current}?"):
+                        context["message"] = f"{current} cancelled"
+                        current = node["on_success"]
+                        continue
 
                     resolved_args = self._resolve_args(
                         node.get("args", {}),

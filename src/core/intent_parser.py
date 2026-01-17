@@ -6,7 +6,7 @@ import joblib, re, datetime, pytz, numpy, importlib
 from core.logger import logger
 from core.intent_classifier import classify_intent, KEYWORD_VALUES, MODE_PATTERNS, IntentClassifier
 from src.templates.template_registry import TEMPLATE_REGISTRY, score_template
-from core.registry import file_registry, module_registry
+from core.registry import file_registry, module_registry, FUNCTION_REGISTRY
 from core.patterns import WHEN_PATTERNS
 
 
@@ -17,6 +17,7 @@ from core.patterns import WHEN_PATTERNS
 class Intent:
     action: str
     params: Dict[str, Any] = field(default_factory=dict)
+    confirm: bool = False
     confidence: float = 1.0
 
 
@@ -107,7 +108,7 @@ class IntentParser:
                 return Intent("get_datetime", params={"get": get, "day": day})
 
             if pred_intent in ("shutdown", "sleep", "lock", "logout", "restart"):
-                return Intent(pred_intent)
+                return Intent(pred_intent, confirm=True)
 
             if pred_intent == "reminder":
                 when = self.extract_when(user_input)

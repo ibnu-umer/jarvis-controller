@@ -16,42 +16,32 @@ class SystemController(BaseModule):
 
     @action(name="shutdown")
     def shutdown(self):
-        if JarvisTray.confirm_with_popup("Are you sure you want to shutdown?", "Confirm Shutdown"):
-            self._run("shutdown /s /t 0")
-            return self.success("Shutting down")
-        return self.success("Shutdown Cancelled")
+        self._run("shutdown /s /t 0")
+        return self.success("Shutting down")
     
 
     @action(name="restart")
     def restart(self):
-        if JarvisTray.confirm_with_popup("Are you sure you want to restart?", "Confirm Restart"):
-            self._run("shutdown /r /t 0")
-            return self.success("Restarting")
-        return self.success("Restart Cancelled")
-    
+        self._run("shutdown /r /t 0")
+        return self.success("Restarting")
+
 
     @action(name="logout")
     def logout(self):
-        if JarvisTray.confirm_with_popup("Are you sure you want to logout?", "Confirm Logout"):
-            self._run("shutdown /l")
-            return self.success("Logging out")
-        return self.success("Logout Cancelled")
+        self._run("shutdown /l")
+        return self.success("Logging out")
     
 
     @action(name="sleep")
     def sleep(self):
-        if JarvisTray.confirm_with_popup("Are you sure you want to sleep?", "Confirm Sleep"):
-            self._run("powershell -command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState('Suspend', $false, $false)\"")
-            return self.success("Sleeping")
-        return self.success("Sleep Cancelled")
+        self._run("powershell -command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState('Suspend', $false, $false)\"")
+        return self.success("Sleeping")
     
 
     @action(name="lock")
     def lock(self):
-        if JarvisTray.confirm_with_popup("Are you sure you want to lock?", "Confirm Lock?"):
-            self._run("rundll32.exe user32.dll,LockWorkStation")
-            return self.success("Locked")
-        return self.success("Lock cancelled")
+        self._run("rundll32.exe user32.dll,LockWorkStation")
+        return self.success("Locked")
     
 
     @action(name="brightness", params={"value", "mode"})

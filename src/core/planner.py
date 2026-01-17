@@ -86,6 +86,7 @@ class Planner:
                         "type": "action",
                         "controller": intent.action,
                         "args": intent.params,
+                        "confirm": intent.confirm,
                         "on_success": "done",
                         "on_failure": "abort"
                     },
