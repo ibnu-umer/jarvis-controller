@@ -23,11 +23,12 @@ from core.logger import logger
 
 
 class Popup(QWidget):
-    def __init__(self, app, parent, screen_time_window, command_runner):
+    def __init__(self, app, parent, screen_time_window, template_window, command_runner):
         super().__init__()
         self._parent = parent
-        self.command_runner = command_runner
         self.screen_time_window = screen_time_window
+        self.template_window = template_window
+        self.command_runner = command_runner
         self.tts = TTS()
 
         self.setWindowFlags(
@@ -68,12 +69,17 @@ class Popup(QWidget):
         self.response.setFont(response_font)
         self.response.setWordWrap(True)
 
+        template_btn = QPushButton("T")
+        template_btn.setFixedWidth(30)
+        template_btn.clicked.connect(self.template_window.show)
+
         screen_usage_btn = QPushButton("U")
         screen_usage_btn.setFixedWidth(30)
         screen_usage_btn.clicked.connect(self.screen_time_window.show)
 
         info_row = QHBoxLayout()
         info_row.addWidget(self.response)
+        info_row.addWidget(template_btn)
         info_row.addWidget(screen_usage_btn)
 
         self.task_list = QListWidget()
