@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QBrush, QColor, QPainterPath, QFont
 
+from tray.context_popup import ContextPopup
 from core.registry import FUNCTION_REGISTRY, module_registry
 from core.logger import logger
 
@@ -25,8 +26,9 @@ class ActionNodeItem(QGraphicsRectItem):
         super().__init__(0, 0, self.WIDTH, self.HEIGHT)
         self.setPos(0, y)   
         self.editor = editor
+        self.action = action
         self.block_id = block_id
-        params = FUNCTION_REGISTRY[action].get("params")
+        params = FUNCTION_REGISTRY[self.action].get("params")
         self.params = {p: None for p in params}
 
         self.setBrush(QBrush(QColor("#2b2b2b")))
@@ -35,7 +37,7 @@ class ActionNodeItem(QGraphicsRectItem):
 
         # Title
         self.title_item = QGraphicsTextItem(self)
-        self.title_item.setPlainText(action)
+        self.title_item.setPlainText(f"{self.block_id} {self.action}")
         self.title_item.setDefaultTextColor(Qt.GlobalColor.white)
         self.title_item.setTextWidth(self.WIDTH - 60)
         self.title_item.setPos(12, 8)
@@ -102,6 +104,11 @@ class ActionNodeItem(QGraphicsRectItem):
     def delete_self(self):
         self.editor.remove_block(self.block_id)
 
+    
+    def update_id(self, id):
+        self.block_id = id
+        self.title_item.setPlainText(f"{self.block_id} {self.action}")
+
 
 
 # ---------------- CONNECTION ---------------- #
@@ -159,13 +166,37 @@ class TemplateEditorWindow(QMainWindow):
         self.sidebar.setFixedWidth(160)
         layout.addWidget(self.sidebar)
 
-        # ---------- CANVAS ---------- #
+        # ---------- CANVAS + TASK BAR ---------- #
+        canvas_layout = QVBoxLayout()
+
         self.scene = QGraphicsScene()
         self.scene.selectionChanged.connect(self.on_selection_changed)
 
         self.view = QGraphicsView(self.scene)
         self.view.setDragMode(QGraphicsView.DragMode.NoDrag)
-        layout.addWidget(self.view, 1)
+
+        canvas_layout.addWidget(self.view, 1)
+
+        # ----- Task bar -----
+        task_bar = QHBoxLayout()
+        task_bar.addStretch()  
+
+        self.context_btn = QPushButton("Context")
+        self.context_btn.clicked.connect(self._show_context)
+
+        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn.clicked.connect(self.cancel)
+
+        self.save_btn = QPushButton("Save")
+        self.save_btn.clicked.connect(self.save)
+
+        task_bar.addWidget(self.context_btn)
+        task_bar.addWidget(self.cancel_btn)
+        task_bar.addWidget(self.save_btn)
+
+        canvas_layout.addLayout(task_bar)
+
+        layout.addLayout(canvas_layout, 1)
 
         # ---------- TEST PANEL ---------- #
         test_widget = QWidget()
@@ -207,7 +238,7 @@ class TemplateEditorWindow(QMainWindow):
 
     def add_block(self, item):
         y = len(self.blocks) * self.BLOCK_SPACING
-        block_id = uuid4()
+        block_id = len(self.blocks) + 1
         block = ActionNodeItem(item.text(), y, self, block_id)
         self.scene.addItem(block)
 
@@ -226,7 +257,8 @@ class TemplateEditorWindow(QMainWindow):
         self.relayout_blocks()
         self.scene.blockSignals(False)
 
-        del self.context[block_id] # remove data from context
+        if block_id in self.context:
+            del self.context[block_id] # remove data from context
 
         for conn in self.connections:
             conn.update_path()
@@ -247,7 +279,7 @@ class TemplateEditorWindow(QMainWindow):
             return
 
         block = items[0]
-        action_name = block.title_item.toPlainText()
+        action_name = block.title_item.toPlainText().split(" ")[1]
         self.test_label.setText(action_name)
 
         info = FUNCTION_REGISTRY.get(action_name)
@@ -284,7 +316,7 @@ class TemplateEditorWindow(QMainWindow):
         block = items[0]
         block_id = block.block_id 
 
-        action_name = block.title_item.toPlainText()
+        action_name = block.title_item.toPlainText().split(" ")[1]
         params = {
             name: box.text()
             for name, box in self.param_inputs.items()
@@ -296,7 +328,7 @@ class TemplateEditorWindow(QMainWindow):
         result = self.run_action(action_name, params)
         logger.info(f"[TEST] result: {result}")
 
-        self.context[block_id] = result["data"]
+        self.context[block_id] = [action_name, result["data"]]
         self.test_result.setText("Success" if result["success"] else "Failure")
         logger.info(f"[TEST] context: {list(self.context.values())}")
 
@@ -317,19 +349,26 @@ class TemplateEditorWindow(QMainWindow):
 
 
     def relayout_blocks(self):
+        # sort blocks by current order
         blocks = list(self.blocks.values())
 
-        for i, block in enumerate(blocks):
-            block.setPos(0, i * self.BLOCK_SPACING)
+        # rebuild dict with fresh 1-based order
+        self.blocks.clear()
 
-        # Remove old connections
+        for idx, block in enumerate(blocks, start=1):
+            block.block_id = idx
+            block.update_id(idx)
+            block.setPos(0, (idx - 1) * self.BLOCK_SPACING)
+            self.blocks[idx] = block
+
+        # rebuild connections
         for conn in self.connections:
             self.scene.removeItem(conn)
         self.connections.clear()
 
-        # Rebuild connections in visual order
-        for i in range(len(blocks) - 1):
-            conn = ConnectionItem(blocks[i], blocks[i + 1])
+        ordered_blocks = list(self.blocks.values())
+        for i in range(len(ordered_blocks) - 1):
+            conn = ConnectionItem(ordered_blocks[i], ordered_blocks[i + 1])
             self.scene.addItem(conn)
             self.connections.append(conn)
 
@@ -337,26 +376,26 @@ class TemplateEditorWindow(QMainWindow):
 
 
     def move_block(self, block, direction: int):
-        items = list(self.blocks.items())
+        blocks = list(self.blocks.values())
 
-        idx = next(
-            (i for i, (_, b) in enumerate(items) if b is block),
-            None
-        )
-        if idx is None:
+        try:
+            idx = blocks.index(block)
+        except ValueError:
             return
 
         new_idx = idx + direction
-        if new_idx < 0 or new_idx >= len(items):
+        if not (0 <= new_idx < len(blocks)):
             return
 
-        items[idx], items[new_idx] = items[new_idx], items[idx]
+        blocks[idx], blocks[new_idx] = blocks[new_idx], blocks[idx]
 
-        self.blocks = dict(items)
+        # rebuild dict in new order
+        self.blocks = {i + 1: b for i, b in enumerate(blocks)}
 
         self.scene.blockSignals(True)
         self.relayout_blocks()
         self.scene.blockSignals(False)
+
 
 
     def closeEvent(self, event):
@@ -370,6 +409,29 @@ class TemplateEditorWindow(QMainWindow):
     def _populate_sidebar(self):
         func_names = list(FUNCTION_REGISTRY.keys())
         self.sidebar.addItems(func_names)
+
+
+    def _show_context(self):
+        dlg = ContextPopup(self.context, self)
+        dlg.exec()
+
+
+    def cancel(self):
+        self.close()
+
+
+    def save(self):
+        data = []
+
+        for idx, block in self.blocks.items():
+            data.append({
+                "id": idx,
+                "action": block.action,
+                "params": block.params,
+            })
+
+        print("SAVED TEMPLATE:")
+        print(data)
 
 
 
