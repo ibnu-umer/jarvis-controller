@@ -4,12 +4,14 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
     QGraphicsTextItem, QGraphicsEllipseItem,
-    QGraphicsPathItem, QGraphicsProxyWidget
+    QGraphicsPathItem, QGraphicsProxyWidget, QLineEdit
 )
 from PyQt6.QtCore import Qt, QPointF
-from PyQt6.QtGui import QBrush, QColor, QPainterPath
+from PyQt6.QtGui import QBrush, QColor, QPainterPath, QFont
 
+from core.registry import FUNCTION_REGISTRY, module_registry
 
+from uuid import uuid4
 
 
 # ---------------- BLOCK ITEM ---------------- #
@@ -18,10 +20,12 @@ class ActionNodeItem(QGraphicsRectItem):
     WIDTH = 240
     HEIGHT = 100
 
-    def __init__(self, title: str, y: int, editor):
+    def __init__(self, action: str, y: int, editor, block_id):
         super().__init__(0, 0, self.WIDTH, self.HEIGHT)
         self.setPos(0, y)   
         self.editor = editor
+        self.block_id = block_id
+        info = FUNCTION_REGISTRY.get(action)
 
         self.setBrush(QBrush(QColor("#2b2b2b")))
         self.setPen(QColor("#555555"))
@@ -29,7 +33,7 @@ class ActionNodeItem(QGraphicsRectItem):
 
         # Title
         self.title_item = QGraphicsTextItem(self)
-        self.title_item.setPlainText(title)
+        self.title_item.setPlainText(action)
         self.title_item.setDefaultTextColor(Qt.GlobalColor.white)
         self.title_item.setTextWidth(self.WIDTH - 60)
         self.title_item.setPos(12, 8)
@@ -39,7 +43,7 @@ class ActionNodeItem(QGraphicsRectItem):
         self.result_item.setPlainText("Result: —")
         self.result_item.setDefaultTextColor(Qt.GlobalColor.gray)
         self.result_item.setTextWidth(self.WIDTH - 24)
-        self.result_item.setPos(12, 42)
+        self.result_item.setPos(12, 68)
 
         # Input port (top center)
         self.input_port = QGraphicsEllipseItem(
@@ -94,7 +98,7 @@ class ActionNodeItem(QGraphicsRectItem):
 
 
     def delete_self(self):
-        self.editor.remove_block(self)
+        self.editor.remove_block(self.block_id)
 
 
 
@@ -135,10 +139,12 @@ class TemplateEditorWindow(QMainWindow):
         self.setWindowTitle("Jarvis Template Editor")
         self.resize(820, 460)
 
-        self.blocks = []
+        self.blocks = {}
         self.connections = []
+        self.context = {}
 
         self._init_ui()
+        self._populate_sidebar()
 
 
     def _init_ui(self):
@@ -148,12 +154,6 @@ class TemplateEditorWindow(QMainWindow):
 
         # ---------- ACTION SIDEBAR ---------- #
         self.sidebar = QListWidget()
-        self.sidebar.addItems([
-            "get_folder_name",
-            "open_folder",
-            "read_file",
-            "send_notification"
-        ])
         self.sidebar.setFixedWidth(160)
         layout.addWidget(self.sidebar)
 
@@ -166,26 +166,35 @@ class TemplateEditorWindow(QMainWindow):
         layout.addWidget(self.view, 1)
 
         # ---------- TEST PANEL ---------- #
-        test_main_layout = QVBoxLayout()
         test_widget = QWidget()
         test_widget.setFixedWidth(220)
-        test_layout = QVBoxLayout()
 
+        self.test_layout = QVBoxLayout(test_widget)
+        self.test_layout.setContentsMargins(8, 8, 8, 8)
+
+        self.test_title = QLabel("Action Test")
         self.test_label = QLabel("No action selected")
-        self.test_result = QLabel("—")
+        self.test_desc = QLabel("")
+        self.test_desc.setWordWrap(True)
 
+        self.params_container = QVBoxLayout()   # dynamic inputs
+
+        self.test_result = QLabel("")
         self.test_btn = QPushButton("Test Action")
         self.test_btn.clicked.connect(self.test_selected)
 
-        test_layout.addWidget(QLabel("Action Test"))
-        test_layout.addWidget(self.test_label)
-        test_layout.addWidget(self.test_result)
-        test_layout.addStretch()      
-        test_layout.addWidget(self.test_btn)
+        self.test_layout.addWidget(self.test_title)
+        self.test_layout.addWidget(self.test_label)
+        self.test_layout.addWidget(self.test_desc)
+        self.test_layout.addSpacing(8)
+        self.test_layout.addLayout(self.params_container)
 
-        test_widget.setLayout(test_layout)
-        test_main_layout.addWidget(test_widget)
-        layout.addLayout(test_main_layout)
+        self.test_layout.addStretch()
+        self.test_layout.addWidget(self.test_result)
+        self.test_layout.addWidget(self.test_btn)
+
+        test_widget.setLayout(self.test_layout)
+        layout.addWidget(test_widget)
 
         # ---------- SIGNALS ---------- #
         self.sidebar.itemDoubleClicked.connect(self.add_block)
@@ -195,72 +204,121 @@ class TemplateEditorWindow(QMainWindow):
     # ---------- LOGIC ---------- #
 
     def add_block(self, item):
-        y = len(self.blocks) * 140
-        block = ActionNodeItem(item.text(), y, self)
+        y = len(self.blocks) * self.BLOCK_SPACING
+        block_id = uuid4()
+        block = ActionNodeItem(item.text(), y, self, block_id)
         self.scene.addItem(block)
-        self.blocks.append(block)
 
-        if len(self.blocks) > 1:
-            conn = ConnectionItem(self.blocks[-2], block)
-            self.scene.addItem(conn)
-            self.connections.append(conn)
-
-        self.scene.setSceneRect(self.scene.itemsBoundingRect())
+        self.blocks[block_id] = block
+        self.relayout_blocks()
  
 
-    def remove_block(self, block):
+    def remove_block(self, block_id):
+        block = self.blocks.pop(block_id, None)
+        if not block:
+            return
+
         self.scene.removeItem(block)
-        self.blocks.remove(block)
 
         self.scene.blockSignals(True)
         self.relayout_blocks()
         self.scene.blockSignals(False)
+
+        del self.context[block_id] # remove data from context
 
         for conn in self.connections:
             conn.update_path()
 
 
     def on_selection_changed(self):
-        if not self.scene:
-            return
-
         try:
             items = self.scene.selectedItems()
         except RuntimeError:
             return
 
-        if items:
-            block = items[0]
-            self.test_label.setText(block.title_item.toPlainText())
-        else:
+        self.clear_params()
+
+        if not items:
             self.test_label.setText("No action selected")
+            self.test_desc.setText("")
+            self.test_result.setText("")
+            return
+
+        block = items[0]
+        action_name = block.title_item.toPlainText()
+        self.test_label.setText(action_name)
+
+        info = FUNCTION_REGISTRY.get(action_name)
+        if not info:
+            self.test_desc.setText("No metadata available")
+            return
+
+        # Description
+        self.test_desc.setText(info.get("description", ""))
+
+        # Params
+        self.param_inputs = {}  # store for testing
+        for param in info.get("params", []):
+            label = QLabel(param)
+            input_box = QLineEdit()
+            input_box.setPlaceholderText(param)
+
+            self.params_container.addWidget(label)
+            self.params_container.addWidget(input_box)
+
+            self.param_inputs[param] = input_box
 
 
     def test_selected(self):
         items = self.scene.selectedItems()
         if not items:
-            self.test_result.setText("Nothing selected")
             return
 
         block = items[0]
-        # fake test result
-        result = "OK"
-        block.set_result(result)
-        self.test_result.setText(result)
+        block_id = block.block_id   # ← THIS IS THE UUID
+
+        params = {
+            name: box.text()
+            for name, box in self.param_inputs.items()
+        }
+
+        action_name = block.title_item.toPlainText()
+        result = self.run_action(action_name, params)
+
+        self.context[block_id] = result["data"]
+        self.test_result.setText("OK")
+        print(self.context)
+
+
+    def run_action(self, action, params):
+        func_info = FUNCTION_REGISTRY.get(action)
+        instance = module_registry.get_module(func_info["class"])
+        action_func = getattr(instance, func_info["function"], None)
+        return action_func(**params)
+
+
+    def clear_params(self):
+        while self.params_container.count():
+            item = self.params_container.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
 
 
     def relayout_blocks(self):
-        # Reposition blocks
-        for i, block in enumerate(self.blocks):
+        blocks = list(self.blocks.values())
+
+        for i, block in enumerate(blocks):
             block.setPos(0, i * self.BLOCK_SPACING)
 
-        # Rebuild connections
+        # Remove old connections
         for conn in self.connections:
             self.scene.removeItem(conn)
         self.connections.clear()
 
-        for i in range(len(self.blocks) - 1):
-            conn = ConnectionItem(self.blocks[i], self.blocks[i + 1])
+        # Rebuild connections in visual order
+        for i in range(len(blocks) - 1):
+            conn = ConnectionItem(blocks[i], blocks[i + 1])
             self.scene.addItem(conn)
             self.connections.append(conn)
 
@@ -268,17 +326,22 @@ class TemplateEditorWindow(QMainWindow):
 
 
     def move_block(self, block, direction: int):
-        idx = self.blocks.index(block)
-        new_idx = idx + direction
+        items = list(self.blocks.items())
 
-        if new_idx < 0 or new_idx >= len(self.blocks):
-            return  # out of bounds
-
-        # Swap
-        self.blocks[idx], self.blocks[new_idx] = (
-            self.blocks[new_idx],
-            self.blocks[idx],
+        idx = next(
+            (i for i, (_, b) in enumerate(items) if b is block),
+            None
         )
+        if idx is None:
+            return
+
+        new_idx = idx + direction
+        if new_idx < 0 or new_idx >= len(items):
+            return
+
+        items[idx], items[new_idx] = items[new_idx], items[idx]
+
+        self.blocks = dict(items)
 
         self.scene.blockSignals(True)
         self.relayout_blocks()
@@ -291,6 +354,11 @@ class TemplateEditorWindow(QMainWindow):
         except Exception:
             pass
         super().closeEvent(event)
+
+
+    def _populate_sidebar(self):
+        func_names = list(FUNCTION_REGISTRY.keys())
+        self.sidebar.addItems(func_names)
 
 
 
