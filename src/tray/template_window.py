@@ -3,8 +3,8 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QListWidget,
     QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
-    QGraphicsTextItem, QGraphicsEllipseItem, 
-    QGraphicsPathItem, QGraphicsProxyWidget, QLineEdit
+    QGraphicsTextItem, QGraphicsEllipseItem, QScrollArea,
+    QGraphicsPathItem, QGraphicsProxyWidget, QLineEdit, QTextEdit
 )
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QBrush, QColor, QPainterPath, QFont
@@ -28,6 +28,7 @@ class ActionNodeItem(QGraphicsRectItem):
         self.editor = editor
         self.action = action
         self.block_id = block_id
+
         params = FUNCTION_REGISTRY[self.action].get("params")
         self.params = {p: None for p in params}
 
@@ -37,7 +38,7 @@ class ActionNodeItem(QGraphicsRectItem):
 
         # Title
         self.title_item = QGraphicsTextItem(self)
-        self.title_item.setPlainText(f"{self.block_id} {self.action}")
+        self.title_item.setPlainText(f"{self.action}")
         self.title_item.setDefaultTextColor(Qt.GlobalColor.white)
         self.title_item.setTextWidth(self.WIDTH - 60)
         self.title_item.setPos(12, 8)
@@ -90,11 +91,11 @@ class ActionNodeItem(QGraphicsRectItem):
 
 
     def move_up(self):
-        self.editor.move_block(self, direction=-1)
+        self.editor.move_block(self.block_id, direction=-1)
 
 
     def move_down(self):
-        self.editor.move_block(self, direction=1)
+        self.editor.move_block(self.block_id, direction=1)
 
 
     def set_result(self, text: str):
@@ -149,6 +150,7 @@ class TemplateEditorWindow(QMainWindow):
         self.resize(820, 460)
 
         self.blocks = {}
+        self.ordered_blocks_ids = []
         self.connections = []
         self.context = {}
 
@@ -181,16 +183,12 @@ class TemplateEditorWindow(QMainWindow):
         task_bar = QHBoxLayout()
         task_bar.addStretch()  
 
-        self.context_btn = QPushButton("Context")
-        self.context_btn.clicked.connect(self._show_context)
-
         self.cancel_btn = QPushButton("Cancel")
         self.cancel_btn.clicked.connect(self.cancel)
 
         self.save_btn = QPushButton("Save")
         self.save_btn.clicked.connect(self.save)
 
-        task_bar.addWidget(self.context_btn)
         task_bar.addWidget(self.cancel_btn)
         task_bar.addWidget(self.save_btn)
 
@@ -198,36 +196,62 @@ class TemplateEditorWindow(QMainWindow):
 
         layout.addLayout(canvas_layout, 1)
 
-        # ---------- TEST PANEL ---------- #
-        test_widget = QWidget()
-        test_widget.setFixedWidth(220)
+        # ---------- TEST PANEL (SCROLLABLE) ---------- #
+        test_container = QWidget()
+        test_container.setFixedWidth(300)
 
-        self.test_layout = QVBoxLayout(test_widget)
+        test_scroll = QScrollArea()
+        test_scroll.setWidgetResizable(True)
+        test_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        test_content = QWidget()
+        self.test_layout = QVBoxLayout(test_content)
         self.test_layout.setContentsMargins(8, 8, 8, 8)
 
-        self.test_title = QLabel("Action Test")
+        # ---- Title ----
+        self.test_title = QLabel("Action Inspector")
+        self.test_title.setStyleSheet("font-weight: bold")
+
+        # ---- Selected action ----
         self.test_label = QLabel("No action selected")
         self.test_desc = QLabel("")
         self.test_desc.setWordWrap(True)
 
-        self.params_container = QVBoxLayout()   # dynamic inputs
+        # ---- Params ----
+        self.params_container = QVBoxLayout()
 
+        # ---- Context display ----
+        self.context_title = QLabel("Context")
+        self.context_view = QTextEdit()
+        self.context_view.setReadOnly(True)
+        self.context_view.setFixedHeight(100)
+
+        # ---- Result ----
         self.test_result = QLabel("")
+
+        # ---- Test button ----
         self.test_btn = QPushButton("Test Action")
         self.test_btn.clicked.connect(self.test_selected)
 
+        # ---- Layout order ----
         self.test_layout.addWidget(self.test_title)
         self.test_layout.addWidget(self.test_label)
         self.test_layout.addWidget(self.test_desc)
         self.test_layout.addSpacing(8)
         self.test_layout.addLayout(self.params_container)
-
+        self.test_layout.addSpacing(8)
+        self.test_layout.addWidget(self.context_title)
+        self.test_layout.addWidget(self.context_view)
         self.test_layout.addStretch()
         self.test_layout.addWidget(self.test_result)
         self.test_layout.addWidget(self.test_btn)
 
-        test_widget.setLayout(self.test_layout)
-        layout.addWidget(test_widget)
+        test_scroll.setWidget(test_content)
+
+        container_layout = QVBoxLayout(test_container)
+        container_layout.addWidget(test_scroll)
+
+        layout.addWidget(test_container)
 
         # ---------- SIGNALS ---------- #
         self.sidebar.itemDoubleClicked.connect(self.add_block)
@@ -238,11 +262,12 @@ class TemplateEditorWindow(QMainWindow):
 
     def add_block(self, item):
         y = len(self.blocks) * self.BLOCK_SPACING
-        block_id = len(self.blocks) + 1
+        block_id = uuid4().hex[:4]
         block = ActionNodeItem(item.text(), y, self, block_id)
         self.scene.addItem(block)
 
-        self.blocks[block_id] = block
+        self.blocks[block_id] = {"block": block, "name": item.text()}
+        self.ordered_blocks_ids.append(block_id)
         self.relayout_blocks()
  
 
@@ -251,17 +276,20 @@ class TemplateEditorWindow(QMainWindow):
         if not block:
             return
 
-        self.scene.removeItem(block)
-
-        self.scene.blockSignals(True)
+        self.scene.removeItem(block["block"])
+        self.ordered_blocks_ids.remove(block_id)
         self.relayout_blocks()
-        self.scene.blockSignals(False)
 
-        if block_id in self.context:
-            del self.context[block_id] # remove data from context
+        # self.scene.blockSignals(True)
+        # self.relayout_blocks()
+        # self.scene.blockSignals(False)
 
-        for conn in self.connections:
-            conn.update_path()
+        # if block_id in self.context:
+        #     del self.context[block_id] # remove data from context
+
+        # print("connections", self.connections)
+        # for conn in self.connections:
+        #     conn.update_path()
 
 
     def on_selection_changed(self):
@@ -276,10 +304,13 @@ class TemplateEditorWindow(QMainWindow):
             self.test_label.setText("No action selected")
             self.test_desc.setText("")
             self.test_result.setText("")
+            self.context_view.clear()
+            self.test_result.setText("")
             return
-
+        
+        # Title
         block = items[0]
-        action_name = block.title_item.toPlainText().split(" ")[1]
+        action_name = block.action
         self.test_label.setText(action_name)
 
         info = FUNCTION_REGISTRY.get(action_name)
@@ -306,6 +337,15 @@ class TemplateEditorWindow(QMainWindow):
             if param in tested_params:
                 input_box.setText(tested_params[param])
 
+        # Context
+        self.set_context(block.block_id)
+
+
+    def set_context(self, block_id):
+        context = self.blocks.get(block_id, {}).get("context")
+        text = "\n".join(f"{k}: {v}" for k, v in context.items()) if context else "No context available"
+        self.context_view.setPlainText(text)
+
 
 
     def test_selected(self):
@@ -316,7 +356,7 @@ class TemplateEditorWindow(QMainWindow):
         block = items[0]
         block_id = block.block_id 
 
-        action_name = block.title_item.toPlainText().split(" ")[1]
+        action_name = block.action
         params = {
             name: box.text()
             for name, box in self.param_inputs.items()
@@ -328,9 +368,10 @@ class TemplateEditorWindow(QMainWindow):
         result = self.run_action(action_name, params)
         logger.info(f"[TEST] result: {result}")
 
-        self.context[block_id] = [action_name, result["data"]]
+        self.blocks[block_id]["context"] = result["data"]
+        self.set_context(block_id)
         self.test_result.setText("Success" if result["success"] else "Failure")
-        logger.info(f"[TEST] context: {list(self.context.values())}")
+        logger.info(f"[TEST] context: {result["data"]}")
 
 
     def run_action(self, action, params):
@@ -349,53 +390,36 @@ class TemplateEditorWindow(QMainWindow):
 
 
     def relayout_blocks(self):
-        # sort blocks by current order
-        blocks = list(self.blocks.values())
-
-        # rebuild dict with fresh 1-based order
-        self.blocks.clear()
-
-        for idx, block in enumerate(blocks, start=1):
-            block.block_id = idx
-            block.update_id(idx)
+        for idx, block_id in enumerate(self.ordered_blocks_ids):
+            block = self.blocks[block_id]["block"]
             block.setPos(0, (idx - 1) * self.BLOCK_SPACING)
-            self.blocks[idx] = block
 
-        # rebuild connections
+        self.rebuild_connections()
+
+
+    def rebuild_connections(self):
         for conn in self.connections:
             self.scene.removeItem(conn)
         self.connections.clear()
 
-        ordered_blocks = list(self.blocks.values())
-        for i in range(len(ordered_blocks) - 1):
-            conn = ConnectionItem(ordered_blocks[i], ordered_blocks[i + 1])
+        for i in range(len(self.ordered_blocks_ids) - 1):
+            block_1 = self.blocks[self.ordered_blocks_ids[i]]["block"]
+            block_2 = self.blocks[self.ordered_blocks_ids[i + 1]]["block"]
+            conn = ConnectionItem(block_1, block_2)
             self.scene.addItem(conn)
             self.connections.append(conn)
 
-        self.scene.setSceneRect(self.scene.itemsBoundingRect())
 
-
-    def move_block(self, block, direction: int):
-        blocks = list(self.blocks.values())
-
-        try:
-            idx = blocks.index(block)
-        except ValueError:
-            return
-
+    def move_block(self, block_id, direction: int):
+        idx = self.ordered_blocks_ids.index(block_id)
         new_idx = idx + direction
-        if not (0 <= new_idx < len(blocks)):
+        self.ordered_blocks_ids.remove(block_id)
+
+        if not (0 <= new_idx < len(self.ordered_blocks_ids)):
             return
-
-        blocks[idx], blocks[new_idx] = blocks[new_idx], blocks[idx]
-
-        # rebuild dict in new order
-        self.blocks = {i + 1: b for i, b in enumerate(blocks)}
-
-        self.scene.blockSignals(True)
+        
+        self.ordered_blocks_ids.insert(new_idx, block_id)
         self.relayout_blocks()
-        self.scene.blockSignals(False)
-
 
 
     def closeEvent(self, event):
@@ -409,11 +433,6 @@ class TemplateEditorWindow(QMainWindow):
     def _populate_sidebar(self):
         func_names = list(FUNCTION_REGISTRY.keys())
         self.sidebar.addItems(func_names)
-
-
-    def _show_context(self):
-        dlg = ContextPopup(self.context, self)
-        dlg.exec()
 
 
     def cancel(self):
