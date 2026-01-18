@@ -3,13 +3,14 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QListWidget,
     QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
-    QGraphicsTextItem, QGraphicsEllipseItem,
+    QGraphicsTextItem, QGraphicsEllipseItem, 
     QGraphicsPathItem, QGraphicsProxyWidget, QLineEdit
 )
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QBrush, QColor, QPainterPath, QFont
 
 from core.registry import FUNCTION_REGISTRY, module_registry
+from core.logger import logger
 
 from uuid import uuid4
 
@@ -25,7 +26,8 @@ class ActionNodeItem(QGraphicsRectItem):
         self.setPos(0, y)   
         self.editor = editor
         self.block_id = block_id
-        info = FUNCTION_REGISTRY.get(action)
+        params = FUNCTION_REGISTRY[action].get("params")
+        self.params = {p: None for p in params}
 
         self.setBrush(QBrush(QColor("#2b2b2b")))
         self.setPen(QColor("#555555"))
@@ -254,9 +256,10 @@ class TemplateEditorWindow(QMainWindow):
             return
 
         # Description
-        self.test_desc.setText(info.get("description", ""))
+        self.test_desc.setText(info.get("description", "No Description"))
 
         # Params
+        tested_params = block.params
         self.param_inputs = {}  # store for testing
         for param in info.get("params", []):
             label = QLabel(param)
@@ -267,6 +270,10 @@ class TemplateEditorWindow(QMainWindow):
             self.params_container.addWidget(input_box)
 
             self.param_inputs[param] = input_box
+            
+            if param in tested_params:
+                input_box.setText(tested_params[param])
+
 
 
     def test_selected(self):
@@ -275,19 +282,23 @@ class TemplateEditorWindow(QMainWindow):
             return
 
         block = items[0]
-        block_id = block.block_id   # ← THIS IS THE UUID
+        block_id = block.block_id 
 
+        action_name = block.title_item.toPlainText()
         params = {
             name: box.text()
             for name, box in self.param_inputs.items()
+            if box.text() != ""
         }
+        block.params.update(params)
+        logger.info(f"[TEST] action: {action_name} | params: {params}")
 
-        action_name = block.title_item.toPlainText()
         result = self.run_action(action_name, params)
+        logger.info(f"[TEST] result: {result}")
 
         self.context[block_id] = result["data"]
-        self.test_result.setText("OK")
-        print(self.context)
+        self.test_result.setText("Success" if result["success"] else "Failure")
+        logger.info(f"[TEST] context: {list(self.context.values())}")
 
 
     def run_action(self, action, params):
