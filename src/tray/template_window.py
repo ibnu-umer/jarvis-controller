@@ -413,11 +413,11 @@ class TemplateEditorWindow(QMainWindow):
     def move_block(self, block_id, direction: int):
         idx = self.ordered_blocks_ids.index(block_id)
         new_idx = idx + direction
-        self.ordered_blocks_ids.remove(block_id)
-
+       
         if not (0 <= new_idx < len(self.ordered_blocks_ids)):
             return
         
+        self.ordered_blocks_ids.remove(block_id)
         self.ordered_blocks_ids.insert(new_idx, block_id)
         self.relayout_blocks()
 
