@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtGui import QBrush, QColor, QPainterPath, QFont
 
-from tray.context_popup import ContextPopup
 from core.registry import FUNCTION_REGISTRY, module_registry
 from core.logger import logger
 
