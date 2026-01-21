@@ -7,7 +7,7 @@ from core.logger import logger
 from core.intent_classifier import classify_intent, KEYWORD_VALUES, MODE_PATTERNS, IntentClassifier
 from src.templates.template_registry import TEMPLATE_REGISTRY, score_template
 from core.registry import file_registry, module_registry, FUNCTION_REGISTRY
-from core.patterns import WHEN_PATTERNS
+from core.patterns import WHEN_PATTERNS, OPEN_PATTERN
 
 
 
@@ -165,24 +165,40 @@ class IntentParser:
     # ---------------- Intent Handlers ----------------
 
     def _handle_open(self, text: str):
-        file_key, file_path = self._match_registry_key(text)
-        if not file_key:
+        match = OPEN_PATTERN.search(text)
+        instance_match = match.group(1) if match else None
+        with_match = match.group(2) if match and match.group(2) else None
+        folder_name = None
+
+        if not instance_match:
             return "fallback"
+        
+        instance_name, instance_path = self._match_registry_key(instance_match)
 
-        if file_path.startswith(("http://", "https://")):
-            return "open_app", {"app_name": file_key}
+        if with_match:
+            folder_name, _ = self._match_registry_key(with_match)
 
-        path = Path(file_path)
+
+        if instance_path.startswith(("http://", "https://")):
+            return "open_app", {"app_name": instance_name}
+
+        path = Path(instance_path)
 
         if path.is_dir():
-            return "open_folder", {"folder_name": file_key}
+            return "open_folder", {"folder_name": instance_name}
 
         if path.is_file():
+
             if path.suffix.lower() in self.EXECUTABLE_SUFFIXES:
+                if instance_name == "vlc":
+                    return "open_vlc", {"folder_name": with_match} # no registy matching needed
+
                 if "new" in text:
-                    return "open_app", {"app_name": file_key}
-                return "open_focus_app", {"app_name": file_key}
-            return "open_file", {"file_name": file_key}
+                    return "open_app", {"app_name": instance_name, "folder_name": folder_name}
+                
+                return "open_focus_app", {"app_name": instance_name, "folder_name": folder_name}
+            
+            return "open_file", {"file_name": instance_name}
 
         return "fallback"
     

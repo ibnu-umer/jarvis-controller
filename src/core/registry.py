@@ -61,7 +61,7 @@ class FileRegistry:
         for name, path in self._entries.items():
             if name in text:
                 return name, path
-        return
+        return None, None
     
 
 

@@ -1,8 +1,10 @@
-import subprocess
-import requests
+import subprocess, os, requests
 from pathlib import Path
 from core.base_module import BaseModule
 from core.registry import file_registry, action
+from difflib import SequenceMatcher
+
+
 
 
 class VLCController(BaseModule):
@@ -10,6 +12,7 @@ class VLCController(BaseModule):
         self.file_registry = file_registry
         self.vlc_url = "http://127.0.0.1:8080"
         self.vlc_password = "user"
+        self.videos_folder_path = r"D:\user\Videos"
 
 
     def _vlc_request(self, command: str, **params):
@@ -28,15 +31,29 @@ class VLCController(BaseModule):
 
     # ------------------------- OPEN / PLAY ------------------------- #
 
-    @action(name="open_vlc")
-    def open_vlc(self):
+    @action(name="open_vlc", params={"folder_name", "folder_path"})
+    def open_vlc(self, folder_name=None, folder_path=None):
         """Launch VLC without media."""
+        vlc_path = [self.file_registry.get_path("vlc")]
+
+        if folder_name:
+            choices = list(entry.name for entry in os.scandir(self.videos_folder_path))
+            match_folder = self.best_match(folder_name, choices)
+            folder_path = Path(self.videos_folder_path) / match_folder if match_folder else None
+
+            if folder_path:
+                vlc_path.append(str(folder_path))
+
+        
+        if folder_name and not folder_path:
+            return self.success("No matching folder found to load")
+
         try:
-            vlc_path = self.file_registry.get_path("vlc")
-            subprocess.Popen([vlc_path])
+            subprocess.Popen(vlc_path)
             return self.success("VLC opened")
         except Exception as e:
             return self.failure("Failed to open VLC", data={"error": str(e)})
+            
 
 
     @action(name="play_media", params={"path", "path_name"})
@@ -114,3 +131,28 @@ class VLCController(BaseModule):
     @action(name="vlc_random")
     def random(self):
         return self.success("Random toggled") if self._vlc_request("pl_random") else self.failure("Random failed")
+
+
+
+    # ------------- HELPERS ------------------ #
+    def best_match(self, query, choices, min_score=0.6):
+
+        def similarity(a, b):
+            return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+        
+        def token_score(a, b):
+            a_tokens = set(a.lower().split())
+            b_tokens = set(b.lower().split())
+            return len(a_tokens & b_tokens) / max(len(a_tokens), 1)
+
+
+        scored = []
+        for c in choices:
+            score = (
+                0.6 * similarity(query, c) +
+                0.4 * token_score(query, c)
+            )
+            scored.append((score, c))
+
+        score, match = max(scored)
+        return match if score >= min_score else None

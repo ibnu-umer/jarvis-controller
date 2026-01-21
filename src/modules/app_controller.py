@@ -67,7 +67,7 @@ class AppController(BaseModule):
         if res["success"]:
             return res
 
-        return self.open_app(app_name)
+        return self.open_app(app_name, folder_name=folder_name)
 
 
     @action(name="close_app", params={"app_name"})

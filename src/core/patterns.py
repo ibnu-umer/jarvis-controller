@@ -58,3 +58,9 @@ WHEN_PATTERNS = [
     ("day_keyword", DAY_KEYWORD_PATTERN),
     ("relative_date", RELATIVE_DATE_PATTERN),
 ]
+
+
+OPEN_PATTERN = re.compile(
+    r"^(?:open|start|launch)\s+(.+?)(?:\s+with\s+(.+))?$",
+    re.IGNORECASE
+)
